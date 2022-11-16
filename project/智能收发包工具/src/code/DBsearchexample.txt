@@ -1,0 +1,65 @@
+DECLARE @smtypecode INT, @sotype INT ,@sosubtype INT 
+DECLARE @Cnt INT 
+
+SET @smtypecode = 
+
+SELECT @cnt = count(*) FROM SoFormatTable WHERE SmTypeCode = @smtypecode
+
+IF(@cnt <> 1)
+BEGIN 
+	PRINT '存在多个监控对象实例，请手动确认'
+	RETURN 
+END 
+
+PRINT 'CONTINUE'
+
+SELECT @sotype= SoType, @sosubtype = SoSubType FROM SoFormatTable WHERE SmTypeCode = @smtypecode
+
+
+CREATE TABLE #WhiteID(StandardID VARCHAR (20) NULL,Cnt INT NULL,NodeIDStr VARCHAR (255) NULL,StandardName	VARCHAR(255) NULL)	
+
+SELECT S.StandardID,T.NodeID,S.StandardName INTO #node FROM StandardDictTable AS S LEFT JOIN (
+SELECT A.SoType,LEFT(StandardID,7) AS TID ,A.NodeID,SensorName AS StandardName,NodeName FROM SensorFormatTable AS A INNER JOIN NodeFormatTable AS B ON 
+A.NodeId=B.NodeID WHERE A.SoType=@sotype AND A.SoSubType=@sosubtype AND B.SmTypeCode=@smtypecode AND StandardID IS NOT NULL) AS T
+ON LEFT(S.StandardID,7)= T.TID WHERE S.DeviceType=@sotype ORDER BY S.StandardID
+
+INSERT INTO #WhiteID SELECT DISTINCT StandardID,0,'',StandardName FROM #node 
+
+   	
+UPDATE #WhiteID SET Cnt = b.cnt FROM #WhiteID AS a INNER JOIN 
+(SELECT  StandardID,count(*) AS cnt FROM #node WHERE NodeID IS NOT NULL GROUP BY  StandardID) AS b ON a.standardid = b.standardid
+
+
+
+DECLARE @SID varchar(20),@Nid SMALLINT ,@OldSid INT 
+
+SET @OldSid = 0
+
+DECLARE curID CURSOR FOR 
+	SELECT StandardID,NodeID FROM #node WHERE NodeID IS NOT NULL ORDER BY StandardID
+    
+OPEN curID
+FETCH NEXT FROM curID INTO  @SID,@Nid
+WHILE @@FETCH_STATUS = 0
+    BEGIN    
+   	
+   		IF @OldSid <> @SID
+	    	UPDATE #WhiteID SET NodeIDStr = NodeIDStr + LTRIM(RTRIM(STR(@Nid)))  WHERE StandardID = @SID 
+	    ELSE
+		    UPDATE #WhiteID SET NodeIDStr = NodeIDStr +','+ LTRIM(RTRIM(STR(@Nid)))  WHERE StandardID = @SID 
+    	
+    	SET @OldSid = @SID
+
+        FETCH NEXT FROM curID INTO  @SID,@Nid
+    END
+CLOSE curID
+DEALLOCATE curID
+
+
+UPDATE #WhiteID SET NodeIDStr = '0' WHERE NodeIDStr = '';
+SELECT '{'+StandardID+','+LTRIM(RTRIM(STR(Cnt)))+',{'+NodeIDStr+'}},			--'+StandardName FROM  #WhiteID
+
+
+DROP TABLE #node
+DROP TABLE #WhiteID
+GO
