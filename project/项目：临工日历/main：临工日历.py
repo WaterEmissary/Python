@@ -343,8 +343,8 @@ class OverTimeCalendar():
             self.caluInfoLabel.configure(text=t)
 
             # 计算扣除工资
-            tt = "( " + str(self.leave1day) + " + " + str(self.leave2day) + " * 2 )*100 + " \
-                "( " + str(self.ill1day) + " + " + str(self.ill2day) + " * 2 )*40 = " \
+            tt = "- ( " + str(self.leave1day) + " + " + str(self.leave2day) + " * 2 )*100 + " \
+                "( " + str(self.ill1day) + " + " + str(self.ill2day) + " * 2 )*40 = -" \
                 +str((self.leave1day+self.leave2day*2)*(100)+((self.ill1day+self.ill2day*2)*(40)))
             self.decuctInfoLabel.configure(text = tt)
 
