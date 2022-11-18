@@ -43,7 +43,7 @@ class OverTimeCalendar():
                     self.NowChoice = (self.ListBoxList[i][j].get(0),i,j)
                     break
         try:
-            t = self.NowChoice[0]+"号\t"
+            t = self.NowChoice[0] + "号\t"
             temp = self.NowMonthData[self.NowChoice[0]]
             if temp[2] == 7:
                 t = t + "临工到7点\t"
@@ -58,8 +58,8 @@ class OverTimeCalendar():
             elif temp[3] == -4:
                 t = t + "病假一天\t"
             self.selectDayInfoLabel.configure(text=t)
-        except:
-            pass
+        except Exception as msg:
+            print(msg)
 
     # 创建窗口
     def CreateMainWin(self):
@@ -89,7 +89,8 @@ class OverTimeCalendar():
                 else:
                     self.ListBoxList[i].append(tk.Listbox(self.CalendarFrame, width=3, height=1, font=tkFont.Font(size=15),selectbackground='blue'))
                 self.ListBoxList[i][j].bind('<Button-3>',lambda event:self.popup(event))
-                self.ListBoxList[i][j].bind('<Button-1>',lambda event:self.showinfo(event))
+                # self.ListBoxList[i][j].bind('<Button-1>',lambda event:self.showinfo(event))
+                self.ListBoxList[i][j].bind('<<ListboxSelect>>',self.showinfo)
         # 第一行写入周几
         for j in range(len(self.WeekTableList)):
             self.ListBoxList[0][j].insert(tk.END,self.WeekTableList[j])
