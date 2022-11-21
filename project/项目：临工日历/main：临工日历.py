@@ -12,6 +12,7 @@ class OverTimeCalendar():
         self.MonthList = ['1','2','3','4','5','6','7','8','9','10','11','12']
         self.YearList = [x for x in range(2020,2030)]
         self.WeekTableList = ['Mo','Tu','We','Th','Fr','Sa','Su']
+        self.color = {'ot7bg':'lightskyblue','ot8bg':'lightcoral','leave0.5fg':'slateblue','leave1fg':'darkorchid','ill0.5fg':'seagreen','ill1fg':'darkgreen'}
         self.ListBoxList = []
         self.NowChoice = None
         self.NowChoiceInfo = None
@@ -24,6 +25,9 @@ class OverTimeCalendar():
         self.ill1day = 0
         self.ill2day = 0
         self.basesalary = 5800
+        self.illcut = 38
+        self.leavecut = 97
+        self.otadd = 75
         self.tax = int(self.basesalary * 0.185 + 10)
 
     # 右键菜单弹出
@@ -193,10 +197,10 @@ class OverTimeCalendar():
     # 临工按钮
     def OverTimeSet(self,T):
         if T == 7: # 临工到7点
-            self.ListBoxList[self.NowChoice[1]][self.NowChoice[2]].configure(bg='lightskyblue')
+            self.ListBoxList[self.NowChoice[1]][self.NowChoice[2]].configure(bg=self.color['ot7bg'])
             self.NowMonthData[self.NowChoice[0]][2] = 7
         elif T == 8:   #临工到8点
-            self.ListBoxList[self.NowChoice[1]][self.NowChoice[2]].configure(bg='lightcoral')
+            self.ListBoxList[self.NowChoice[1]][self.NowChoice[2]].configure(bg=self.color['ot8bg'])
             self.NowMonthData[self.NowChoice[0]][2] = 8
         elif T == 0: # 没有临工
             self.ListBoxList[self.NowChoice[1]][self.NowChoice[2]].configure(bg='white')
@@ -204,16 +208,16 @@ class OverTimeCalendar():
             self.NowMonthData[self.NowChoice[0]][2] = 0
             self.NowMonthData[self.NowChoice[0]][3] = 0
         elif T == -1:#请假半天
-            self.ListBoxList[self.NowChoice[1]][self.NowChoice[2]].configure(fg='deeppink')
+            self.ListBoxList[self.NowChoice[1]][self.NowChoice[2]].configure(fg=self.color['leave0.5fg'])
             self.NowMonthData[self.NowChoice[0]][3] = -1
         elif T == -2:  # 请假一天
-            self.ListBoxList[self.NowChoice[1]][self.NowChoice[2]].configure(fg='crimson')
+            self.ListBoxList[self.NowChoice[1]][self.NowChoice[2]].configure(fg=self.color['leave1fg'])
             self.NowMonthData[self.NowChoice[0]][3] = -2
         elif T == -3: # 病假半天
-            self.ListBoxList[self.NowChoice[1]][self.NowChoice[2]].configure(fg='lime')
+            self.ListBoxList[self.NowChoice[1]][self.NowChoice[2]].configure(fg=self.color['ill0.5fg'])
             self.NowMonthData[self.NowChoice[0]][3] = -3
         elif T == -4:# 病假一天
-            self.ListBoxList[self.NowChoice[1]][self.NowChoice[2]].configure(fg='aqua')
+            self.ListBoxList[self.NowChoice[1]][self.NowChoice[2]].configure(fg=self.color['ill1fg'])
             self.NowMonthData[self.NowChoice[0]][3] = -4
         print(self.NowChoice)
         print(self.NowMonthData)
@@ -277,17 +281,17 @@ class OverTimeCalendar():
                 if self.NowMonthData[i][2] == 0:
                     pass
                 elif self.NowMonthData[i][2] == 7:
-                    self.ListBoxList[self.NowMonthData[i][0]+1][self.NowMonthData[i][1]].configure(bg='lightskyblue')
+                    self.ListBoxList[self.NowMonthData[i][0]+1][self.NowMonthData[i][1]].configure(bg=self.color['ot7bg'])
                 elif self.NowMonthData[i][2] == 8:
-                    self.ListBoxList[self.NowMonthData[i][0]+1][self.NowMonthData[i][1]].configure(bg='lightcoral')
+                    self.ListBoxList[self.NowMonthData[i][0]+1][self.NowMonthData[i][1]].configure(bg=self.color['ot8bg'])
                 if self.NowMonthData[i][3] == -1:
-                    self.ListBoxList[self.NowMonthData[i][0] + 1][self.NowMonthData[i][1]].configure(fg='deeppink')
+                    self.ListBoxList[self.NowMonthData[i][0] + 1][self.NowMonthData[i][1]].configure(fg=self.color['leave0.5fg'])
                 elif self.NowMonthData[i][3] == -2:
-                    self.ListBoxList[self.NowMonthData[i][0] + 1][self.NowMonthData[i][1]].configure(fg='crimson')
+                    self.ListBoxList[self.NowMonthData[i][0] + 1][self.NowMonthData[i][1]].configure(fg=self.color['leave1fg'])
                 elif self.NowMonthData[i][3] == -3:
-                    self.ListBoxList[self.NowMonthData[i][0] + 1][self.NowMonthData[i][1]].configure(fg='lime')
+                    self.ListBoxList[self.NowMonthData[i][0] + 1][self.NowMonthData[i][1]].configure(fg=self.color['ill0.5fg'])
                 elif self.NowMonthData[i][3] == -4:
-                    self.ListBoxList[self.NowMonthData[i][0] + 1][self.NowMonthData[i][1]].configure(fg='aqua')
+                    self.ListBoxList[self.NowMonthData[i][0] + 1][self.NowMonthData[i][1]].configure(fg=self.color['ill1fg'])
             # 如果没有,创建新数据
         else:
             self.SaveData()
@@ -339,22 +343,24 @@ class OverTimeCalendar():
             self.Ill1InfoLabel.configure(text=str(self.ill1day)+ ' 次')
             self.Ill2InfoLabel.configure(text=str(self.ill2day)+ ' 次')
             # 计算临工工资
-            t = "75*( "+ str(self.ot7day) + " + "+str(self.ot8day)+ " * 2 ) = " \
-                + str(75*(self.ot7day+self.ot8day*2))
+            t = str(self.otadd) + "*( "+ str(self.ot7day) + " + "+str(self.ot8day)+ " * 2 ) = " \
+                + str(self.otadd*(self.ot7day+self.ot8day*2))
             self.caluInfoLabel.configure(text=t)
 
             # 计算扣除工资
-            tt = "- ( " + str(self.leave1day) + " + " + str(self.leave2day) + " * 2 )*100 + " \
-                "( " + str(self.ill1day) + " + " + str(self.ill2day) + " * 2 )*40 = -" \
-                +str((self.leave1day+self.leave2day*2)*(100)+((self.ill1day+self.ill2day*2)*(40)))
+            tt = "- ( " + str(self.leave1day) + " + " + str(self.leave2day) + " * 2 )*"+str(self.leavecut)+" + " \
+                "( " + str(self.ill1day) + " + " + str(self.ill2day) + " * 2 )*"+str(self.illcut)+" = -" \
+                +str((self.leave1day+self.leave2day*2)*(self.leavecut)+((self.ill1day+self.ill2day*2)*(self.illcut)))
             self.decuctInfoLabel.configure(text = tt)
 
             # 预估到手工资
             te = str(self.basesalary) + ' - ' + str(self.tax) + ' + '+\
-                 str((self.ot7day+self.ot8day*2)*(75))+ " - " + \
-                 str((self.leave1day+self.leave2day*2)*(100)) + " - " +\
+                 str((self.ot7day+self.ot8day*2)*(self.otadd))+ " - " + \
+                 str((self.leave1day+self.leave2day*2)*(self.leavecut)) + " - " +\
                  str(40*(self.ill1day+self.ill2day*2))+" = " +\
-                 str(self.basesalary-self.tax+75*(self.ot7day+self.ot8day*2)-(self.leave1day+self.leave2day*2)*(100)-((self.ill1day+self.ill2day*2)*(40)))
+                 str(self.basesalary-self.tax+self.otadd*(self.ot7day+self.ot8day*2)-
+                     (self.leave1day+self.leave2day*2)*(self.leavecut)-
+                     ((self.ill1day+self.ill2day*2)*(self.illcut)))
             self.calugetInfoLabel.configure(text=te)
             time.sleep(0.1)
 
