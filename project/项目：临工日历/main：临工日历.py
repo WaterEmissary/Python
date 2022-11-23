@@ -128,6 +128,8 @@ class OverTimeCalendar():
         self.decuctInfoLabel = tk.Label(self.InfoFrame,fg='darkgreen',font=tkFont.Font(size=12))
         self.calugetLabel = tk.Label(self.InfoFrame,text='本月预估到手工资:',fg='darkorange',font=tkFont.Font(size=12))
         self.calugetInfoLabel = tk.Label(self.InfoFrame,fg='darkorange',font=tkFont.Font(size=12))
+        self.calumaxgetLabel = tk.Label(self.InfoFrame,text='本月预估最高工资:',fg='darkorange',font=tkFont.Font(size=12))
+        self.calumaxgetInfoLabel = tk.Label(self.InfoFrame,fg='darkorange',font=tkFont.Font(size=12))
 
 
         # 界面绑定
@@ -179,6 +181,9 @@ class OverTimeCalendar():
         r = r + 1
         self.calugetLabel.grid(row=r,column=0)
         self.calugetInfoLabel.grid(row=r,column=1,columnspan=3)
+        r = r + 1
+        self.calumaxgetLabel.grid(row=r,column=0)
+        self.calumaxgetInfoLabel.grid(row=r,column=1,columnspan=3)
 
         # init
         # 创建右键菜单
@@ -219,8 +224,6 @@ class OverTimeCalendar():
         elif T == -4:# 病假一天
             self.ListBoxList[self.NowChoice[1]][self.NowChoice[2]].configure(fg=self.color['ill1fg'])
             self.NowMonthData[self.NowChoice[0]][3] = -4
-        print(self.NowChoice)
-        print(self.NowMonthData)
         self.SaveData()
 
     # 确认时间函数
@@ -267,7 +270,7 @@ class OverTimeCalendar():
                 for j in range(7):
                     self.ListBoxList[i+1][j].insert(tk.END,yearlist[i][j])
                     self.NowMonthData[yearlist[i][j]]=[i, j, 0, 0]
-        print(self.NowMonthData)
+
         #判断是否有当月数据
             # 如果有,读入显示
         if os.path.exists(self.SelectYearCombobox.get()+self.SelectMonthCombobox.get()+'.txt'):
@@ -292,6 +295,7 @@ class OverTimeCalendar():
                     self.ListBoxList[self.NowMonthData[i][0] + 1][self.NowMonthData[i][1]].configure(fg=self.color['ill0.5fg'])
                 elif self.NowMonthData[i][3] == -4:
                     self.ListBoxList[self.NowMonthData[i][0] + 1][self.NowMonthData[i][1]].configure(fg=self.color['ill1fg'])
+            print(self.NowMonthData)
             # 如果没有,创建新数据
         else:
             self.SaveData()
@@ -299,13 +303,44 @@ class OverTimeCalendar():
         updateth.daemon = True
         updateth.start()
 
-
     # 保存数据
     def SaveData(self):
         with open(self.SelectYearCombobox.get() + self.SelectMonthCombobox.get() + '.txt', 'w', encoding='utf-8') as f:
             for i in self.NowMonthData:
                 f.write(i + ',' + str(self.NowMonthData[i][0]) + ',' + str(self.NowMonthData[i][1]) + ',' + str(self.NowMonthData[i][2]) +
                         ',' + str(self.NowMonthData[i][3]) +'\n')
+
+    # 计算本月预估最高工资
+    def CaluMaxGet(self):
+        monthday = [0,31,28,31,30,31,30,31,31,30,31,30,31]
+        today = str(datetime.date.today()).split('-')
+        year = int(today[0])
+        month = int(today[1])
+        day = int(today[2])
+        if((year%4==0 or year%100 !=0)or year % 400 == 0):
+            monthday[2] += 1
+        # 如果选中的是本月
+        if int(self.SelectMonthCombobox.get()) == int(today[1]):
+            count = 0
+            # 如果当天有数据，不进入计算
+            if self.NowMonthData[str(day)][2] != 0:
+                j = day + 1
+            else:
+                j = day
+            for i in range(j,monthday[int(today[1])]+1):
+                wd = calendar.weekday(year,month,i)
+                if wd < 5:
+                    count += 150
+            return count
+        elif int(self.SelectMonthCombobox.get()) < int(today[1]):
+            return 0
+        else:
+            count = 0
+            for i in range(1,monthday[int(today[1])]+1):
+                wd = calendar.weekday(year, month, i)
+                if wd < 5:
+                    count += 150
+            return count
 
     # 更新信息函数
     def UpdateInfo(self):
@@ -362,8 +397,16 @@ class OverTimeCalendar():
                      (self.leave1day+self.leave2day*2)*(self.leavecut)-
                      ((self.ill1day+self.ill2day*2)*(self.illcut)))
             self.calugetInfoLabel.configure(text=te)
+
+            # 预估最高到手工资
+            willget = self.CaluMaxGet()
+            haveget = self.basesalary-self.tax+self.otadd*(self.ot7day+self.ot8day*2)-(self.leave1day+self.leave2day*2)*(self.leavecut)-(self.ill1day+self.ill2day*2)*(self.illcut)
+            tm = str(haveget) +' + ' + str(willget) + ' = ' + str(haveget+willget)
+            self.calumaxgetInfoLabel.configure(text=tm)
+
             time.sleep(0.1)
 
 otc = OverTimeCalendar()
 otc.CreateMainWin()
+otc.CaluMaxGet()
 otc.win.mainloop()
