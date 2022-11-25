@@ -128,8 +128,8 @@ class OverTimeCalendar():
         self.decuctInfoLabel = tk.Label(self.InfoFrame,fg='darkgreen',font=tkFont.Font(size=12))
         self.calugetLabel = tk.Label(self.InfoFrame,text='本月预估到手工资:',fg='darkorange',font=tkFont.Font(size=12))
         self.calugetInfoLabel = tk.Label(self.InfoFrame,fg='darkorange',font=tkFont.Font(size=12))
-        self.calumaxgetLabel = tk.Label(self.InfoFrame,text='本月预估最高工资:',fg='darkorange',font=tkFont.Font(size=12))
-        self.calumaxgetInfoLabel = tk.Label(self.InfoFrame,fg='darkorange',font=tkFont.Font(size=12))
+        self.calumaxgetLabel = tk.Label(self.InfoFrame,text='本月预估最高工资:',fg='blueviolet',font=tkFont.Font(size=12))
+        self.calumaxgetInfoLabel = tk.Label(self.InfoFrame,fg='blueviolet',font=tkFont.Font(size=12))
 
 
         # 界面绑定
@@ -179,11 +179,12 @@ class OverTimeCalendar():
         self.decuctLabel.grid(row=r,column=0)
         self.decuctInfoLabel.grid(row=r,column=1,columnspan=3)
         r = r + 1
+        self.calumaxgetLabel.grid(row=r, column=0)
+        self.calumaxgetInfoLabel.grid(row=r, column=1, columnspan=3)
+        r = r + 1
         self.calugetLabel.grid(row=r,column=0)
         self.calugetInfoLabel.grid(row=r,column=1,columnspan=3)
-        r = r + 1
-        self.calumaxgetLabel.grid(row=r,column=0)
-        self.calumaxgetInfoLabel.grid(row=r,column=1,columnspan=3)
+
 
         # init
         # 创建右键菜单

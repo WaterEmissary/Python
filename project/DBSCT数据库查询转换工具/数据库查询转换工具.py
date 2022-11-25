@@ -17,7 +17,7 @@ class win():
         self.sqlTypeList = ['mysql']
     def CreateWin(self):
         self.win = tk.Tk()
-        self.win.title('数据库查询转换工具')
+        self.win.title('DBSCT数据库查询转换工具')
         self.win.resizable(width=False, height=False)
 
         # Frame定义
