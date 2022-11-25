@@ -7,6 +7,7 @@ import tkinter.font as tkFont
 import socket
 import threading
 import time
+import translate.translate as translate
 
 import pymssql
 import xlrd
@@ -998,7 +999,79 @@ class Txt2Xlx2Cfg():
         finally:
             self.txcroot.attributes("-topmost", True)
 
+# txt转DATAINFO类
+class Txt2NodeCode():
+    def __init__(self):
+        self.t2nwin = None
 
+    # 创建窗口函数
+    def CreateWin(self):
+        try:
+            if self.t2nwin.state() == 'normal':
+                self.t2nwin.attributes('-topmost',True)
+                self.t2nwin.attributes('-topmost',False)
+                return
+        except:
+            self.t2nwin = tk.Toplevel(rootc.root)
+            self.t2nwin.title('txt转DATAINFO代码')
+
+        # 主窗口部分
+        self.LeftFrame = tk.Frame(self.t2nwin)
+        self.RightFrame = tk.Frame(self.t2nwin)
+        self.LeftFunctionFrame = tk.Frame(self.LeftFrame)
+        self.RightTextFrame = tk.Frame(self.RightFrame)
+
+        self.OpentxtButton = tk.Button(self.LeftFunctionFrame,text='打开txt',command=self.ReadTxt)
+        self.CopyToPlateButton = tk.Button(self.LeftFunctionFrame,text='复制到剪切板')
+        self.CodeText = tk.Text(self.RightTextFrame,wrap='word', spacing3=5, width=105, height=25,font=tkFont.Font(size=12),state='disabled')
+
+
+        # 主窗口Frame添加
+        self.LeftFrame.grid(row=0,column=0)
+        self.RightFrame.grid(row=0,column=1)
+        self.LeftFunctionFrame.grid(row=0,column=0)
+        self.RightTextFrame.grid(row=0,column=0)
+        # 功能区添加
+        r=0
+        self.OpentxtButton.grid(row=r,column=0)
+        r+=1
+        self.CopyToPlateButton.grid(row=r,column=0)
+
+        #文本区添加
+        self.CodeText.grid(row=0,column=0)
+
+    # 读取txt到列表
+    def ReadTxt(self):
+        self.txtFilepath = filedialog.askopenfilename(filetypes=[('txt File', 'txt')])  # 获取文件地址
+        while self.txtFilepath[-4:] != '.txt' and self.txtFilepath[-4:] != '.TXT':
+            if self.txtFilepath == '':  # 如果点击了取消，或者打开了名字为空的文件
+                return
+            tk.messagebox.showinfo(title="文件格式异常!", message="请打开格式类似TXT_SQL中的“.txt”文本文件！")
+            self.txtFilepath = ''
+        filestr = []
+        self.ovsrstr = []
+        # 打开成功，开始读取文件
+        with open(self.txtFilepath, 'r') as fp:
+            while True:
+                line = fp.readline()
+                if not line:
+                    break
+                filestr.append(line.split())
+
+        # 过滤，取出有用点位
+        for i in filestr:
+            if len(i) == 5:
+                if i[2].isdigit() and i[2] != '0':
+                    self.ovsrstr.append(i)
+
+        self.Node2Code()
+    # 实现点位转代码
+    def Node2Code(self):
+        for i in self.ovsrstr:
+            if i[4] == '1':
+                print('PM5K_U8\t\t\t'+i[3]+';\t\t\t\t'+'//'+i[3])
+            elif i[4] == '4':
+                print('PM5K_F32\t\t\t' + i[3] + ';\t\t\t\t' + '//' + i[3])
 # 智能发包规则类
 class SmartRole():
     def __init__(self):
@@ -2513,10 +2586,12 @@ class Root():
 
         self.FunctionLabel = tk.Label(self.LeftFrame,text='扩展功能',font=tkFont.Font(size=13,weight='bold'),fg='royalblue')
         self.CRCButton = tk.Button(self.LeftFrame, text='CRC校验', width=15, font=tkFont.Font(size=13),command=crc.createwindos)
+        self.Txt2NodeCodeButton = tk.Button(self.LeftFrame,text='txt转DATAINFO',width=15, font=tkFont.Font(size=13),command=t2n.CreateWin)
         self.Txt2Xlx2CfgButton = tk.Button(self.LeftFrame, text='txt转xlx及cfg', width=15, font=tkFont.Font(size=13),
                                            command=t2x2c.txt2xlx2cfgroot)
         self.ConfigCFG = tk.Button(self.LeftFrame, text='设置常用IP地址',width=15,font=tkFont.Font(size=13),command=cfgc.CreateWin)
         self.LuaWhiteBoxButton = tk.Button(self.LeftFrame,text='白盒化Lua工具',width=15,font=tkFont.Font(size=13),command=luabox.CreateWin)
+
 
         self.Version = tk.Label(self.LeftFrame,text=public.Auther,fg='grey')
 
@@ -2529,12 +2604,12 @@ class Root():
         self.CleanTextButton = tk.Button(self.RightFrame_Down, text='清空', width=10,command=public.cleanSendinfoth)
 
     def CreateWindows(self):
-        self.root.title('智能收发包工具')
+        self.root.title('协议编写调试工具')
 
 
         srow = 0
         # Frame
-        self.LeftFrame.grid(row=0, column=0,ipady=50)
+        self.LeftFrame.grid(row=0, column=0,sticky=tk.N)
         self.RightFrame.grid(row=0, column=1)
         self.RightFrame_Up.grid(row=0, column=0)
         self.RightFrame_Down.grid(row=1, column=0)
@@ -2588,6 +2663,8 @@ class Root():
         srow+=1
         self.CRCButton.grid(row=srow, column=0, columnspan=2)
         srow+=1
+        self.Txt2NodeCodeButton.grid(row=srow,column=0,columnspan=2)
+        srow += 1
         self.Txt2Xlx2CfgButton.grid(row=srow,column=0,columnspan=2)
         srow += 1
         self.LuaWhiteBoxButton.grid(row=srow, column=0, columnspan=2)
@@ -2758,6 +2835,7 @@ tcpcliect = TcpCliect()
 smartrole = SmartRole()
 crc = CrcCheck()
 t2x2c = Txt2Xlx2Cfg()
+t2n = Txt2NodeCode()
 com = ComATcp()
 cfgc = ConfigCFGC()
 luabox = WbLuaTool()
