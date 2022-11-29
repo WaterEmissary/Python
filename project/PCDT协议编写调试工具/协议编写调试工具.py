@@ -1,13 +1,15 @@
+import datetime
 import os.path
+import shutil
 import tkinter as tk
 import tkinter.ttk as ttk
+import zipfile
 from tkinter import filedialog
 from tkinter import messagebox
 import tkinter.font as tkFont
 import socket
 import threading
 import time
-import translate.translate as translate
 
 import pymssql
 import xlrd
@@ -19,11 +21,17 @@ from crcmod import mkCrcFun
 """更新日志
 v1.0    发布
 v1.1    添加FSU白盒化工具
+v1.2    软件更名为 协议编写调试工具
+        修改了部分运行逻辑
+        优化了相关功能
+        添加txt转datainfo代码功能
+        添加一键生成固件升级包功能
 """
 
 # 初始值
 thinsert = []
 insertinfoth = [] #添加info线程列表
+trth = []   #翻译线程列表
 
 # MODBUSTCP类
 class ModbusTcp():
@@ -649,14 +657,15 @@ class Txt2Xlx2Cfg():
         self.RuDecinfoLabel = tk.Label(self.RightupFrame, text=self.temp)
         # 右下侧窗体
         self.RightFrame = tk.Frame(self.RightallFrame)
-        self.txt2xlstitleLabel = tk.Label(self.RightFrame, text='txt文档转xls\n', font=tkFont.Font(size=12))
-        self.OpentxtButton = tk.Button(self.RightFrame, text='打开txt', command=self.opentxt)
+        self.txt2xlstitleLabel = tk.Label(self.RightFrame, text='txt文档转xls', font=tkFont.Font(size=12))
+        self.txt2xlswarnLabel = tk.Label(self.RightFrame,text='注:此步后需要手动更改遥控和遥调的Attrib,并添加Unit,NodeDesc',fg='red')
+        self.OpentxtButton = tk.Button(self.RightFrame, text='打开txt', command=self.opentxt,state='disabled')
         self.txtpathEntry = tk.Entry(self.RightFrame, state='disabled', width=55)
-        self.txt2xlsButton = tk.Button(self.RightFrame, text='开始转换', command=self.createexcel)
+        self.txt2xlsButton = tk.Button(self.RightFrame, text='开始转换', command=self.createexcel,state='disabled')
         self.xls2cfgLabel = tk.Label(self.RightFrame, text='xls表格转cfg\n', font=tkFont.Font(size=12))
-        self.OpenxlsButton = tk.Button(self.RightFrame, text='打开xls', command=self.openxls)
+        self.OpenxlsButton = tk.Button(self.RightFrame, text='打开xls', command=self.openxls,state='disabled')
         self.xlspathEntry = tk.Entry(self.RightFrame, state='disabled', width=55)
-        self.xls2cfgButton = tk.Button(self.RightFrame, text='开始转换', command=self.xls2cfg)
+        self.xls2cfgButton = tk.Button(self.RightFrame, text='开始转换', command=self.xls2cfg,state='disabled')
         self.LeftFrame.grid(row=0, column=0)
         self.DevNoLabel.grid(row=1, column=1)
         self.DevNoEntry.grid(row=2, column=1)
@@ -672,6 +681,7 @@ class Txt2Xlx2Cfg():
         self.RuDecinfoLabel.pack()
         self.RightFrame.grid(row=1, column=1)
         self.txt2xlstitleLabel.grid(row=0, column=0)
+        self.txt2xlswarnLabel.grid(row=0,column=1,sticky=tk.S)
         self.OpentxtButton.grid(row=1, column=0)
         self.txtpathEntry.grid(row=1, column=1)
         self.txt2xlsButton.grid(row=2, column=1)
@@ -699,6 +709,8 @@ class Txt2Xlx2Cfg():
                 self.Yidong = False
                 self.TieTa = True
             self.updatedecinfo()
+            self.OpentxtButton.configure(state='normal')
+            self.OpenxlsButton.configure(state='normal')
         except:
             pass
         finally:
@@ -722,6 +734,7 @@ class Txt2Xlx2Cfg():
         while self.txtFilepath[-4:] != '.txt' and self.txtFilepath[-4:] != '.TXT':
             if self.txtFilepath == '':  # 如果点击了取消，或者打开了名字为空的文件
                 self.txcroot.attributes("-topmost", 1)
+                self.txcroot.attributes("-topmost", 0)
                 return
             tk.messagebox.showinfo(title="文件格式异常!", message="请打开格式类似TXT_SQL中的“.txt”文本文件！")
             self.txtFilepath = ''
@@ -733,7 +746,9 @@ class Txt2Xlx2Cfg():
             temp.set(self.Filepath)
             self.txtpathEntry.configure(textvariable=temp)
             self.txtpathEntry.configure(state='disabled')
+        self.txt2xlsButton.configure(state='normal')
         self.txcroot.attributes("-topmost", 1)
+        self.txcroot.attributes("-topmost", 0)
 
     # 打开xls表格
     def openxls(self):
@@ -747,6 +762,7 @@ class Txt2Xlx2Cfg():
         while self.xlsFilepath[-4:] != '.xls' and self.xlsFilepath[-4:] != '.XLS':
             if self.xlsFilepath == '':  # 如果点击了取消，或者打开了名字为空的文件
                 self.txcroot.attributes("-topmost", 1)
+                self.txcroot.attributes("-topmost", 0)
                 return
             tk.messagebox.showinfo(title="文件格式异常!", message="请打开确认修改后的“.xls”表格文件！")
             self.xlsFilepath = ''
@@ -758,7 +774,9 @@ class Txt2Xlx2Cfg():
             temp.set(self.Filepath)
             self.xlspathEntry.configure(textvariable=temp)
             self.xlspathEntry.configure(state='disabled')
+        self.xls2cfgButton.configure(state='normal')
         self.txcroot.attributes("-topmost", 1)
+        self.txcroot.attributes("-topmost", 0)
 
     # 从txt里读取数据
     def readtxt(self):
@@ -1013,16 +1031,16 @@ class Txt2NodeCode():
                 return
         except:
             self.t2nwin = tk.Toplevel(rootc.root)
-            self.t2nwin.title('txt转DATAINFO代码')
+            self.t2nwin.title('txt转DATAINFO代码--该功能目前尚未完善')
 
         # 主窗口部分
-        self.LeftFrame = tk.Frame(self.t2nwin)
+        self.LeftFrame = tk.Frame(self.t2nwin,bd=10)
         self.RightFrame = tk.Frame(self.t2nwin)
         self.LeftFunctionFrame = tk.Frame(self.LeftFrame)
         self.RightTextFrame = tk.Frame(self.RightFrame)
 
-        self.OpentxtButton = tk.Button(self.LeftFunctionFrame,text='打开txt',command=self.ReadTxt)
-        self.CopyToPlateButton = tk.Button(self.LeftFunctionFrame,text='复制到剪切板')
+        self.OpentxtButton = tk.Button(self.LeftFunctionFrame,text='打开txt',width=12,command=self.ReadTxt,font=tkFont.Font(size=12))
+        self.CopyToPlateButton = tk.Button(self.LeftFunctionFrame,text='复制到剪切板',width=12,font=tkFont.Font(size=12),command=lambda :public.copytoplate(self.CodeText))
         self.CodeText = tk.Text(self.RightTextFrame,wrap='word', spacing3=5, width=105, height=25,font=tkFont.Font(size=12),state='disabled')
 
 
@@ -1067,11 +1085,16 @@ class Txt2NodeCode():
         self.Node2Code()
     # 实现点位转代码
     def Node2Code(self):
+        self.CodeText.configure(state='normal')
         for i in self.ovsrstr:
             if i[4] == '1':
-                print('PM5K_U8\t\t\t'+i[3]+';\t\t\t\t'+'//'+i[3])
+                self.CodeText.insert(tk.END,'{0:20s}{1:20}\t//{2}\n'.format('PM5K_U8',i[3]+';',i[3]))
             elif i[4] == '4':
-                print('PM5K_F32\t\t\t' + i[3] + ';\t\t\t\t' + '//' + i[3])
+                self.CodeText.insert(tk.END,'{0:20s}{1:20}\t//{2}\n'.format('PM5K_F32',i[3]+';',i[3]))
+        self.CodeText.configure(state='disabled')
+        self.t2nwin.attributes('-topmost', True)
+        self.t2nwin.attributes('-topmost', False)
+
 # 智能发包规则类
 class SmartRole():
     def __init__(self):
@@ -1239,12 +1262,12 @@ class SmartRole():
     # 保存规则
     def saveRole(self):
         self.win.attributes("-topmost",0)
-        self.saveFilepath = filedialog.asksaveasfilename(initialdir='./src/rule',title='保存规则',filetypes=[("Rule file",'rul')],initialfile='Rule.rul')  # 获取文件地址
+        self.saveFilepath = filedialog.asksaveasfilename(initialdir='./src/rule/',title='保存规则',filetypes=[("Rule file",'rul')],initialfile='Rule.rul')  # 获取文件地址
         if self.saveFilepath == '':
             self.win.attributes("-topmost", 1)
             self.win.attributes("-topmost", 0)
             return
-        if self.saveFilepath.rfind('.rol') != len(self.saveFilepath)-4:
+        if self.saveFilepath.rfind('.rul') != len(self.saveFilepath)-4:
             self.saveFilepath = self.saveFilepath+'.rul'
         with open(self.saveFilepath,'w') as f:
             for i in self.RoleList:
@@ -1381,7 +1404,9 @@ class CrcCheck():
 
         # 校验后数据部分
         self.CheckResultOutLabel = tk.Label(self.mainFrame,text='加上校验位后的数据:',font=tkFont.Font(size=13))
-        self.CheckResultOutText = tk.Text(self.mainFrame,wrap='word',spacing3=5, width=75, height=5,font=tkFont.Font(size=12))
+        self.CheckResultOutText = tk.Text(self.mainFrame,wrap='word',spacing3=5, width=75, height=3,font=tkFont.Font(size=12),state='disabled')
+        self.CodeResultOutLabel = tk.Label(self.mainFrame,text='C语言代码格式：',font=tkFont.Font(size=13))
+        self.CodeResultOutText = tk.Text(self.mainFrame,wrap='word',spacing3=5, width=75, height=3,font=tkFont.Font(size=12),state='disabled')
 
         # 添加物件到窗口
         self.r = 0
@@ -1441,6 +1466,10 @@ class CrcCheck():
         self.CheckResultOutLabel.grid(row=self.r,column=0)
         self.r = self.r + 1
         self.CheckResultOutText.grid(row=self.r,column=0,columnspan=5)
+        self.r += 1
+        self.CodeResultOutLabel.grid(row=self.r,column=0,sticky=tk.W)
+        self.r += 1
+        self.CodeResultOutText.grid(row=self.r,column=0,columnspan=5)
 
         self.setWPIX(event=None)
         self.CheckAlgoComboBox.bind('<<ComboboxSelected>>', self.setWPIX)
@@ -1490,14 +1519,28 @@ class CrcCheck():
     def CalcCrc(self):
         algo = self.CheckAlgoList[self.CheckAogoComboBoxList.index(self.CheckAlgoComboBox.get())]
         needcheck = self.CheckDataText.get('0.0',tk.END)
+        needcheck = needcheck.replace('0x','')
+        needcheck = needcheck.replace(',',' ')
+        needcheck = needcheck.replace('，', ' ')
         result = self.CRC16(needcheck,algo)
+        coder = result[0].split(' ')
+        for i in range(len(coder)):
+            coder[i] = '0x'+coder[i]+','
+        coder[-1] = coder[-1][:-1]
+        t = "".join(coder)
         temp = tk.StringVar()
         temp.set(str(result[1])[2:])
         self.CheckResultEntry.configure(state='normal')
         self.CheckResultEntry.configure(textvariable=temp)
         self.CheckResultEntry.configure(state='disabled')
+        self.CheckResultOutText.configure(state='normal')
+        self.CodeResultOutText.configure(state='normal')
         self.CheckResultOutText.delete('0.0',tk.END)
         self.CheckResultOutText.insert('0.0',result[0])
+        self.CodeResultOutText.delete(0.0,tk.END)
+        self.CodeResultOutText.insert(0.0,t)
+        self.CheckResultOutText.configure(state='disabled')
+        self.CodeResultOutText.configure(state='disabled')
 
 
 # 设置常用IP地址类
@@ -2550,6 +2593,189 @@ class WbLuaTool():
     def ESRPopUp(self,event):
         self.menu.post(event.x_root,event.y_root)
 
+# 一键替换固件升级包类
+class OneKeyUpdateSO():
+    def __init__(self):
+        self.okwin = None
+        self.SoPath = ''
+        self.FsuPath = ''
+
+    # 创建窗口类
+    def CreateWin(self):
+        try:
+            if self.okwin.state() == 'normal':
+                self.okwin.attributes('-topmost',True)
+                self.okwin.attributes('-topmost',False)
+                return
+        except:
+            self.okwin = tk.Toplevel(rootc.root)
+            self.okwin.title('一键替换固件升级包')
+
+        self.okwin.configure(bd=10)
+        self.SoPromptLabel = tk.Label(self.okwin,text='目标文件应为\App\libpm5kpcm.so',fg='red')
+        self.SoPathLabel = tk.Label(self.okwin,text='.so文件地址:',font=tkFont.Font(size=13))
+        self.SoPathEntry = tk.Entry(self.okwin,width=70,font=tkFont.Font(size=13),state='disabled')
+        self.FindSoPathButton = tk.Button(self.okwin,text='选择文件',width=15,font=tkFont.Font(size=12),command=self.FindSoPath)
+
+        self.FsuPromptLabel = tk.Label(self.okwin,text='\n目标文件夹应包含FsuUpdate、FsuUpdate_old、FsuFirmwareUpdate.sh',fg='red')
+        self.FsuPathLabel = tk.Label(self.okwin,text='固件升级包地址:',font=tkFont.Font(size=13))
+        self.FsuPathEntry = tk.Entry(self.okwin,width=70,font=tkFont.Font(size=13),state='disabled')
+        self.FindFsuPathButton = tk.Button(self.okwin,text='选择路径',width=15,font=tkFont.Font(size=12),command=self.FindFsuPath)
+
+        self.StateText = tk.Text(self.okwin,width=95,height=7,state='disabled',spacing3=5,bg='whitesmoke',font=tkFont.Font(size=12))
+
+        self.ExecuteFsuButton = tk.Button(self.okwin,text='替换',width=15,font=tkFont.Font(size=12),state='disabled',command=self.ExcuteSOFsu)
+
+        r = 0
+        self.SoPromptLabel.grid(row=r,column=0,columnspan=2)
+        r+=1
+        self.SoPathLabel.grid(row=r,column=0)
+        self.SoPathEntry.grid(row=r,column=1,sticky=tk.W)
+        r+=1
+        self.FindSoPathButton.grid(row=r,column=1,sticky=tk.W,pady=10,padx=120)
+        r+=1
+        self.FsuPromptLabel.grid(row=r,column=0,columnspan=2)
+        r+=1
+        self.FsuPathLabel.grid(row=r,column=0)
+        self.FsuPathEntry.grid(row=r,column=1,sticky=tk.W)
+        r+=1
+        self.FindFsuPathButton.grid(row=r,column=1,sticky=tk.W,pady=10,padx=120)
+        r+=1
+        self.StateText.grid(row=r,column=0,columnspan=2)
+        r+=1
+        self.ExecuteFsuButton.grid(row=r,column=1,sticky=tk.W,pady=10,padx=120)
+
+        # Text框文本插入格式
+        self.colorlist = ["red", "green"]
+        for i in self.colorlist:
+            # 主窗口Text部件颜色
+            self.StateText.tag_add(i, 1.0, 1.999)
+            self.StateText.tag_config(i, foreground=i)
+
+        # 路径初始化
+        if os.path.exists('./src/fsupath.cfg'):
+            with open('./src/fsupath.cfg','r',encoding='utf-8') as f:
+                self.SoPath = f.readline().replace('\n','')
+                self.FsuPath = f.readline().replace('\n','')
+            self.FindSoPath(pt=True)
+            self.FindFsuPath(pt=True)
+    # 选择so路径
+    def FindSoPath(self,pt=None):
+        if pt == None:
+            self.SoPath = filedialog.askopenfilename(title='请打开\App\libpm5kpcm.so文件',filetypes=[("SO文件",".so")])
+        if self.SoPath[-13:] == 'libpm5kpcm.so':
+            self.SoPathEntry.configure(state='normal')
+            self.SoPathEntry.delete(0,tk.END)
+            self.SoPathEntry.insert(0,self.SoPath)
+            self.SoPathEntry.configure(state='disabled')
+        elif self.SoPath == '':
+            self.SoPath = ''
+            self.SoPathEntry.configure(state='normal')
+            self.SoPathEntry.delete(0, tk.END)
+            self.SoPathEntry.configure(state='disabled')
+        if self.SoPath !='' and self.FsuPath != '':
+            self.ExecuteFsuButton.configure(state='normal')
+        else:
+            self.ExecuteFsuButton.configure(state='disabled')
+        self.okwin.attributes('-topmost', True)
+        self.okwin.attributes('-topmost', False)
+
+    # 选择FsuUpdate路径
+    def FindFsuPath(self,pt=None):
+        if pt == None:
+            self.FsuPath = filedialog.askdirectory(title='请打开FsuFirmwareUpdate.sh所在目录')
+        if self.FsuPath != '':
+            if os.path.exists(self.FsuPath+'\FsuUpdate'):
+                if os.path.exists(self.FsuPath+'\FsuUpdate_old'):
+                    if os.path.exists(self.FsuPath+'\FsuFirmwareUpdate.sh'):
+                        self.FsuPathEntry.configure(state='normal')
+                        self.FsuPathEntry.delete(0,tk.END)
+                        self.FsuPathEntry.insert(0,self.FsuPath)
+                        self.FsuPathEntry.configure(state='disabled')
+                    else:
+                        messagebox.showerror(title='找不到FsuFirmwareUpdate.sh', message='目录中没有FsuFirmwareUpdate.sh!\n请重新选择！')
+                else:
+                    messagebox.showerror(title='找不到FsuUpdate_old', message='目录中没有FsuUpdate_old!\n请重新选择！')
+            else:
+                messagebox.showerror(title='找不到FsuUpdate',message='目录中没有FsuUpdate!\n请重新选择！')
+        else:
+            self.FsuPath = ''
+            self.FsuPathEntry.configure(state='normal')
+            self.FsuPathEntry.delete(0, tk.END)
+            self.FsuPathEntry.configure(state='disabled')
+        if self.SoPath != '' and self.FsuPath != '':
+            self.ExecuteFsuButton.configure(state='normal')
+        else:
+            self.ExecuteFsuButton.configure(state='disabled')
+        self.okwin.attributes('-topmost', True)
+        self.okwin.attributes('-topmost', False)
+
+    # 压缩文件
+    def do_zip_compress(self,dirpath,lastpath):
+        output_name = f"{lastpath}.zip"
+        parent_name = os.path.dirname(dirpath)
+        zip = zipfile.ZipFile(output_name, "w", zipfile.ZIP_DEFLATED)
+        # 多层级压缩
+        for root, dirs, files in os.walk(dirpath):
+            for file in files:
+                if str(file).startswith("~$"):
+                    continue
+                filepath = os.path.join(root, file)
+                writepath = os.path.relpath(filepath, parent_name)
+                zip.write(filepath, writepath)
+        zip.close()
+    # 执行移动操作
+    def ExcuteSOFsu(self):
+        self.FsuUpdatePath = self.FsuPath
+        self.FsuUpdate_oldPath = self.FsuPath
+        self.TrueFsuUpdate = ''
+        self.TrueFsuUpdate_old = ''
+        if os.path.exists(self.FsuUpdatePath+'\FsuUpdate\FsuUpdate'):
+            self.FsuUpdatePath = self.FsuUpdatePath+'\FsuUpdate\FsuUpdate\FsuFirmwareUpdate'
+            self.TrueFsuUpdate = '\FsuUpdate\FsuUpdate'
+        else:
+            self.FsuUpdatePath = self.FsuUpdatePath+'\FsuUpdate\FsuFirmwareUpdate'
+            self.TrueFsuUpdate = '\FsuUpdate'
+        if os.path.exists(self.FsuUpdate_oldPath+'\FsuUpdate_old\FsuUpdate_old'):
+            self.FsuUpdate_oldPath = self.FsuUpdate_oldPath+'\FsuUpdate_old\FsuUpdate_old\FsuFirmwareUpdate'
+            self.TrueFsuUpdate_old = '\FsuUpdate_old\FsuUpdate_old'
+        else:
+            self.FsuUpdate_oldPath = self.FsuUpdate_oldPath+'\FsuUpdate_old\FsuFirmwareUpdate'
+            self.TrueFsuUpdate_old = '\FsuUpdate_old'
+        # 替换
+        t = os.path.getmtime(self.SoPath)
+        t = time.localtime(t)
+        t = time.strftime('%Y-%m-%d %H:%M:%S',t)
+        self.StateText.configure(state='normal')
+        self.StateText.delete(0.0,tk.END)
+        self.StateText.insert(tk.END,'libpm5kpcm.so  最后修改时间:   '+t+'\n','green')
+        try:
+            shutil.copy(self.SoPath,self.FsuUpdatePath)
+            self.StateText.insert(tk.END,self.FsuUpdatePath+'\n\t 替换成功!\n','green')
+        except:
+            self.StateText.insert(tk.END,self.FsuUpdatePath+'\n\t 替换失败!\n','red')
+        try:
+            shutil.copy(self.SoPath,self.FsuUpdate_oldPath)
+            self.StateText.insert(tk.END, self.FsuUpdate_oldPath + '\n\t 替换成功!\n','green')
+        except:
+            self.StateText.insert(tk.END,self.FsuUpdate_oldPath+'\n\t 替换失败!\n','red')
+        try:
+            self.do_zip_compress(self.FsuPath+self.TrueFsuUpdate,self.FsuPath+'\FsuUpdate')
+            self.StateText.insert(tk.END, 'FsuUpdate 压缩成功!\n', 'green')
+        except:
+            self.StateText.insert(tk.END,'FsuUpdate 压缩失败!\n','red')
+        try:
+            self.do_zip_compress(self.FsuPath+self.TrueFsuUpdate_old,self.FsuPath+'\FsuUpdate_old')
+            self.StateText.insert(tk.END, 'FsuUpdate_old 压缩成功!\n','green')
+        except:
+            self.StateText.insert(tk.END,'FsuUpdate_old 压缩失败!\n','red')
+
+        self.StateText.configure(state='disabled')
+        # 成功执行一次后保存地址
+        with open('./src/fsupath.cfg','w',encoding='utf-8') as f:
+            f.write(self.SoPath+'\n')
+            f.write(self.FsuPath+'\n')
+
 # 主窗口类
 class Root():
     def __init__(self):
@@ -2585,12 +2811,13 @@ class Root():
         self.SmartSendButton = tk.Button( self.LeftFrame, text='开启', width=10,command=modbustcp.smartsendinfo)
 
         self.FunctionLabel = tk.Label(self.LeftFrame,text='扩展功能',font=tkFont.Font(size=13,weight='bold'),fg='royalblue')
-        self.CRCButton = tk.Button(self.LeftFrame, text='CRC校验', width=15, font=tkFont.Font(size=13),command=crc.createwindos)
-        self.Txt2NodeCodeButton = tk.Button(self.LeftFrame,text='txt转DATAINFO',width=15, font=tkFont.Font(size=13),command=t2n.CreateWin)
-        self.Txt2Xlx2CfgButton = tk.Button(self.LeftFrame, text='txt转xlx及cfg', width=15, font=tkFont.Font(size=13),
+        self.CRCButton = tk.Button(self.LeftFrame, text='CRC校验', width=17, font=tkFont.Font(size=13),command=crc.createwindos)
+        self.Txt2NodeCodeButton = tk.Button(self.LeftFrame,text='txt转DATAINFO',width=17, font=tkFont.Font(size=13),command=t2n.CreateWin)
+        self.Txt2Xlx2CfgButton = tk.Button(self.LeftFrame, text='txt转xlx及cfg', width=17, font=tkFont.Font(size=13),
                                            command=t2x2c.txt2xlx2cfgroot)
-        self.ConfigCFG = tk.Button(self.LeftFrame, text='设置常用IP地址',width=15,font=tkFont.Font(size=13),command=cfgc.CreateWin)
-        self.LuaWhiteBoxButton = tk.Button(self.LeftFrame,text='白盒化Lua工具',width=15,font=tkFont.Font(size=13),command=luabox.CreateWin)
+        self.ConfigCFG = tk.Button(self.LeftFrame, text='设置常用IP地址',width=17,font=tkFont.Font(size=13),command=cfgc.CreateWin)
+        self.LuaWhiteBoxButton = tk.Button(self.LeftFrame,text='白盒化Lua工具',width=17,font=tkFont.Font(size=13),command=luabox.CreateWin)
+        self.OneKeyUpdateButton = tk.Button(self.LeftFrame, text='一键替换固件升级包', width=17, font=tkFont.Font(size=13),command=okupdt.CreateWin)
 
 
         self.Version = tk.Label(self.LeftFrame,text=public.Auther,fg='grey')
@@ -2668,6 +2895,8 @@ class Root():
         self.Txt2Xlx2CfgButton.grid(row=srow,column=0,columnspan=2)
         srow += 1
         self.LuaWhiteBoxButton.grid(row=srow, column=0, columnspan=2)
+        srow += 1
+        self.OneKeyUpdateButton.grid(row=srow, column=0, columnspan=2)
         srow+=1
         self.ConfigCFG.grid(row=srow, column=0, columnspan=2)
         srow+=1
@@ -2716,7 +2945,7 @@ class Public():
         self.IfGetInfo = False
         self.IfSendSmartInfo = False
 
-        self.Auther = 'V1.1\tAuther by Zx'
+        self.Auther = 'V1.2\tAuther by Zx'
 
     # 初始化常用List
     def initCFG(self):
@@ -2744,8 +2973,6 @@ class Public():
                         line = f.readline().strip()
                     self.PortList.append(int(line))
                     line = f.readline().strip()
-
-
 
     # 协议类型下拉框回调函数
     def protocoltypechange(self,event):
@@ -2828,6 +3055,18 @@ class Public():
         rootc.SendText.delete(0.0,tk.END)
         rootc.ShowRecvText.configure(state='disabled')
 
+    # 复制到剪切板
+    def copytoplate(self,obj,str1=None):
+        root = tk.Tk()
+        root.withdraw()
+        root.clipboard_clear()
+        if str1 == None:
+            t = obj.get(0.0,tk.END)
+        else:
+            t = str1
+        root.clipboard_append(t)
+        root.destroy()
+
 public = Public()
 udplog = Udplog()
 modbustcp = ModbusTcp()
@@ -2839,6 +3078,7 @@ t2n = Txt2NodeCode()
 com = ComATcp()
 cfgc = ConfigCFGC()
 luabox = WbLuaTool()
+okupdt = OneKeyUpdateSO()
 rootc = Root()
 rootc.CreateWindows()
 rootc.root.mainloop()
