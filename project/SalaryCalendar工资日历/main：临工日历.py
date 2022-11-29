@@ -329,12 +329,18 @@ class OverTimeCalendar():
             else:
                 j = day
             for i in range(j,monthday[int(today[1])]+1):
+                # 如果最后一天有数据，不进行计算
+                if self.NowMonthData[str(monthday[int(today[1])])][2] != 0:
+                    return count
                 wd = calendar.weekday(year,month,i)
                 if wd < 5:
                     count += 150
+            # 返回能获得的最高工资
             return count
+        # 如果是已经过去的月份
         elif int(self.SelectMonthCombobox.get()) < int(today[1]):
             return 0
+        # 未来的月份
         else:
             count = 0
             for i in range(1,monthday[int(today[1])]+1):
@@ -401,7 +407,10 @@ class OverTimeCalendar():
 
             # 预估最高到手工资
             willget = self.CaluMaxGet()
-            haveget = self.basesalary-self.tax+self.otadd*(self.ot7day+self.ot8day*2)-(self.leave1day+self.leave2day*2)*(self.leavecut)-(self.ill1day+self.ill2day*2)*(self.illcut)
+            haveget = self.basesalary-\
+                      self.tax+self.otadd*(self.ot7day+self.ot8day*2)-\
+                      (self.leave1day+self.leave2day*2)*(self.leavecut)-\
+                      (self.ill1day+self.ill2day*2)*(self.illcut)
             tm = str(haveget) +' + ' + str(willget) + ' = ' + str(haveget+willget)
             self.calumaxgetInfoLabel.configure(text=tm)
 
