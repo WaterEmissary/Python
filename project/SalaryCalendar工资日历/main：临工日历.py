@@ -106,6 +106,14 @@ class OverTimeCalendar():
         self.basesalaryInfoLabel = tk.Label(self.InfoFrame,fg='dodgerblue',font=tkFont.Font(size=12))
         self.taxLabel = tk.Label(self.InfoFrame,text='税: ',fg='crimson',font=tkFont.Font(size=12))
         self.taxInfoLabel = tk.Label(self.InfoFrame,fg='crimson',font=tkFont.Font(size=12))
+        self.workdayLabel = tk.Label(self.InfoFrame,text='本月工作日:',font=tkFont.Font(size=12),fg='slateblue')
+        self.workdayInfoLabel = tk.Label(self.InfoFrame,font=tkFont.Font(size=12),fg='slateblue')
+        self.workEfficiencyLabel = tk.Label(self.InfoFrame,text='临工回报比:',font=tkFont.Font(size=12),fg='salmon')
+        self.workEfficiencyInfoLabel = tk.Label(self.InfoFrame,font=tkFont.Font(size=12),fg='salmon')
+        self.averagedaysabeforeLabel = tk.Label(self.InfoFrame,text='平均日工资(税前):',font=tkFont.Font(size=12),fg='dodgerblue')
+        self.averagedaybeforeInfoLabel = tk.Label(self.InfoFrame,font=tkFont.Font(size=12),fg='dodgerblue')
+        self.averagedaysalaryLabel = tk.Label(self.InfoFrame,text='平均日工资(税后):',font=tkFont.Font(size=12),fg='dodgerblue')
+        self.averagedayInfoLabel = tk.Label(self.InfoFrame,font=tkFont.Font(size=12),fg='dodgerblue')
         self.allDayLabel = tk.Label(self.InfoFrame,text='本月总计临工:',fg='lightcoral',font=tkFont.Font(size=12))
         self.allDayInfoLabel = tk.Label(self.InfoFrame,fg='lightcoral',font=tkFont.Font(size=12))
         self.allLDayLabel = tk.Label(self.InfoFrame,text='本月总计请假:',fg='seagreen',font=tkFont.Font(size=12))
@@ -152,7 +160,17 @@ class OverTimeCalendar():
         self.basesalaryInfoLabel.grid(row=r,column=1)
         self.taxLabel.grid(row=r,column=2)
         self.taxInfoLabel.grid(row=r,column=3)
-        r = r+1
+        r = r + 1
+        self.workdayLabel.grid(row=r,column=0)
+        self.workdayInfoLabel.grid(row=r,column=1)
+        self.workEfficiencyLabel.grid(row=r,column=2)
+        self.workEfficiencyInfoLabel.grid(row=r,column=3)
+        r = r + 1
+        self.averagedaysabeforeLabel.grid(row=r,column=0)
+        self.averagedaybeforeInfoLabel.grid(row=r,column=1)
+        self.averagedaysalaryLabel.grid(row=r,column=2)
+        self.averagedayInfoLabel.grid(row=r,column=3)
+        r = r + 1
         self.allDayLabel.grid(row=r,column=0)
         self.allDayInfoLabel.grid(row=r,column=1)
         self.allLDayLabel.grid(row=r,column=2)
@@ -313,13 +331,14 @@ class OverTimeCalendar():
 
     # 计算本月预估最高工资
     def CaluMaxGet(self):
-        monthday = [0,31,28,31,30,31,30,31,31,30,31,30,31]
+        self.monthday = [0,31,28,31,30,31,30,31,31,30,31,30,31]
+        self.workday = 0
         today = str(datetime.date.today()).split('-')
         year = int(today[0])
         month = int(today[1])
         day = int(today[2])
         if((year%4==0 or year%100 !=0)or year % 400 == 0):
-            monthday[2] += 1
+            self.monthday[2] += 1
         # 如果选中的是本月
         if int(self.SelectMonthCombobox.get()) == int(today[1]):
             count = 0
@@ -328,13 +347,14 @@ class OverTimeCalendar():
                 j = day + 1
             else:
                 j = day
-            for i in range(j,monthday[int(today[1])]+1):
+            for i in range(j,self.monthday[int(today[1])]+1):
                 # 如果最后一天有数据，不进行计算
-                if self.NowMonthData[str(monthday[int(today[1])])][2] != 0:
+                if self.NowMonthData[str(self.monthday[int(today[1])])][2] != 0:
                     return count
                 wd = calendar.weekday(year,month,i)
                 if wd < 5:
                     count += 150
+                    self.workday += 1
             # 返回能获得的最高工资
             return count
         # 如果是已经过去的月份
@@ -343,11 +363,27 @@ class OverTimeCalendar():
         # 未来的月份
         else:
             count = 0
-            for i in range(1,monthday[int(today[1])]+1):
+            for i in range(1,self.monthday[int(today[1])]+1):
                 wd = calendar.weekday(year, month, i)
                 if wd < 5:
                     count += 150
+                    self.workday += 1
             return count
+
+    # 计算日平均工资
+    def AverageDaySalary(self):
+        self.monthday = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        self.workday = 0
+        today = str(datetime.date.today()).split('-')
+        year = int(today[0])
+        month = int(today[1])
+        if ((year % 4 == 0 or year % 100 != 0) or year % 400 == 0):
+            self.monthday[2] += 1
+        for i in range(1, self.monthday[int(self.SelectMonthCombobox.get())] + 1):
+            wd = calendar.weekday(year, month, i)
+            if wd < 5:
+                self.workday += 1
+
 
     # 更新信息函数
     def UpdateInfo(self):
@@ -414,7 +450,18 @@ class OverTimeCalendar():
             tm = str(haveget) +' + ' + str(willget) + ' = ' + str(haveget+willget)
             self.calumaxgetInfoLabel.configure(text=tm)
 
-            time.sleep(0.1)
+            # 计算平均工资
+            self.AverageDaySalary()
+            self.workdayInfoLabel.configure(text=str(self.workday))
+            average = (self.basesalary - self.tax) / self.workday
+            self.averagedayInfoLabel.configure(text="{0:.2f}".format(average))
+            baverage = (self.basesalary) / self.workday
+            self.averagedaybeforeInfoLabel.configure(text="{0:.2f}".format(baverage))
+            eaverage = average/8
+            eot8 = 150/3
+            self.workEfficiencyInfoLabel.configure(text="{0:.2f}%".format((eot8/eaverage)*100))
+
+            time.sleep(0.5)
 
 otc = OverTimeCalendar()
 otc.CreateMainWin()
