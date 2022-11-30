@@ -26,6 +26,7 @@ v1.2    软件更名为 协议编写调试工具
         优化了相关功能
         添加txt转datainfo代码功能
         添加一键生成固件升级包功能
+        添加一键追加设备类型功能
 """
 
 # 初始值
@@ -2597,8 +2598,14 @@ class WbLuaTool():
 class OneKeyUpdateSO():
     def __init__(self):
         self.okwin = None
+        self.adtwin = None
+        self.DevTypeList = ['1  空调','2  电源','3  油机','4  电表','5  其余','6  读卡器']
         self.SoPath = ''
         self.FsuPath = ''
+        self.Dnum = ''
+        self.DName = ''
+        self.DType = ''
+        self.Other = ''
 
     # 创建窗口类
     def CreateWin(self):
@@ -2625,6 +2632,8 @@ class OneKeyUpdateSO():
         self.StateText = tk.Text(self.okwin,width=95,height=7,state='disabled',spacing3=5,bg='whitesmoke',font=tkFont.Font(size=12))
 
         self.ExecuteFsuButton = tk.Button(self.okwin,text='替换',width=15,font=tkFont.Font(size=12),state='disabled',command=self.ExcuteSOFsu)
+        self.AddDeviceTypeButton = tk.Button(self.okwin,text='追加IntelligentDeviceType.txt',font=tkFont.Font(size=12),command=self.AddDeviceType)
+
 
         r = 0
         self.SoPromptLabel.grid(row=r,column=0,columnspan=2)
@@ -2644,6 +2653,9 @@ class OneKeyUpdateSO():
         self.StateText.grid(row=r,column=0,columnspan=2)
         r+=1
         self.ExecuteFsuButton.grid(row=r,column=1,sticky=tk.W,pady=10,padx=120)
+        r += 1
+        self.AddDeviceTypeButton.grid(row=r, column=1, sticky=tk.E)
+
 
         # Text框文本插入格式
         self.colorlist = ["red", "green"]
@@ -2668,6 +2680,7 @@ class OneKeyUpdateSO():
             self.SoPathEntry.delete(0,tk.END)
             self.SoPathEntry.insert(0,self.SoPath)
             self.SoPathEntry.configure(state='disabled')
+            self.savePath()
         elif self.SoPath == '':
             self.SoPath = ''
             self.SoPathEntry.configure(state='normal')
@@ -2692,6 +2705,7 @@ class OneKeyUpdateSO():
                         self.FsuPathEntry.delete(0,tk.END)
                         self.FsuPathEntry.insert(0,self.FsuPath)
                         self.FsuPathEntry.configure(state='disabled')
+                        self.savePath()
                     else:
                         messagebox.showerror(title='找不到FsuFirmwareUpdate.sh', message='目录中没有FsuFirmwareUpdate.sh!\n请重新选择！')
                 else:
@@ -2724,6 +2738,7 @@ class OneKeyUpdateSO():
                 writepath = os.path.relpath(filepath, parent_name)
                 zip.write(filepath, writepath)
         zip.close()
+
     # 执行移动操作
     def ExcuteSOFsu(self):
         self.FsuUpdatePath = self.FsuPath
@@ -2771,10 +2786,124 @@ class OneKeyUpdateSO():
             self.StateText.insert(tk.END,'FsuUpdate_old 压缩失败!\n','red')
 
         self.StateText.configure(state='disabled')
-        # 成功执行一次后保存地址
-        with open('./src/fsupath.cfg','w',encoding='utf-8') as f:
-            f.write(self.SoPath+'\n')
-            f.write(self.FsuPath+'\n')
+
+    # 保存操作路径到文本中
+    def savePath(self):
+        with open('./src/fsupath.cfg', 'w', encoding='utf-8') as f:
+            f.write(self.SoPath + '\n')
+            f.write(self.FsuPath + '\n')
+
+    # 追加IntelligentDeviceType.txt
+    def AddDeviceType(self):
+        try:
+            if self.adtwin.state() == 'normal':
+                self.adtwin.attributes('-topmost',True)
+                self.adtwin.attributes('-topmost',False)
+                return
+        except:
+            self.adtwin = tk.Toplevel(rootc.root)
+            self.adtwin.title('追加IntelligentDeviceType.txt')
+
+        self.adtwin.configure(bd=10)
+
+        self.DevNumLabel = tk.Label(self.adtwin,text='设备编号:',font=tkFont.Font(size=12))
+        self.DevNameLabel = tk.Label(self.adtwin,text='设备名称:',font=tkFont.Font(size=12))
+        self.DevTypeLabel = tk.Label(self.adtwin,text='设备类型:',font=tkFont.Font(size=12))
+
+        self.DevNumEntry = tk.Entry(self.adtwin,font=tkFont.Font(size=12),width=15)
+        self.DevNameEntry = tk.Entry(self.adtwin,font=tkFont.Font(size=12),width=25)
+        self.DevTypeCombobox = ttk.Combobox(self.adtwin,state='readonly',font=tkFont.Font(size=12),width=20)
+        self.DevTypeCombobox['value'] = self.DevTypeList
+        self.DevTypeCombobox.current(0)
+
+        self.OtherLabel = tk.Label(self.adtwin,text='PollTime,PollTimeOut,DownAddr,PortConfig,SpecialOption(逗号间隔，一般不做修改)',font=tkFont.Font(size=12))
+        self.OtherEntry = tk.Entry(self.adtwin,font=tkFont.Font(size=12),width=40)
+
+        self.ShowAddCodeLabel = tk.Label(self.adtwin,text='生成语句预览:',font=tkFont.Font(size=12))
+        self.ShowAddTitleLabel = tk.Label(self.adtwin,text="Type\tDescription\tClass\t其它参数",font=tkFont.Font(size=12))
+        self.ShowAddCodeText = tk.Text(self.adtwin,width=80,height=2,wrap='none',font=tkFont.Font(size=12),bg='whitesmoke',state='disabled')
+        self.SureAddButton = tk.Button(self.adtwin, text='一键追加',font=tkFont.Font(size=12),command=self.AddToTxt)
+
+        rb = 0
+        self.DevNumLabel.grid(row=rb,column=0,sticky=tk.W)
+        self.DevNameLabel.grid(row=rb,column=1,sticky=tk.W)
+        self.DevTypeLabel.grid(row=rb,column=2,sticky=tk.W)
+        rb += 1
+        self.DevNumEntry.grid(row=rb,column=0,sticky=tk.W)
+        self.DevNameEntry.grid(row=rb,column=1,sticky=tk.W)
+        self.DevTypeCombobox.grid(row=rb,column=2,sticky=tk.W)
+        rb += 1
+        self.OtherLabel.grid(row=rb,column=0,columnspan=3,sticky=tk.W)
+        rb += 1
+        self.OtherEntry.grid(row=rb,column=0,columnspan=3,sticky=tk.W)
+        rb += 1
+        self.ShowAddCodeLabel.grid(row=rb,column=0,sticky=tk.W)
+        rb += 1
+        self.ShowAddTitleLabel.grid(row=rb, column=0, columnspan=3,sticky=tk.W)
+        rb += 1
+        self.ShowAddCodeText.grid(row=rb,column=0,columnspan=3)
+        rb += 1
+        self.SureAddButton.grid(row=rb,column=1)
+
+        # 信息初始化
+        self.OtherEntry.insert(0,'1000,7500,1,4,NULL')
+
+        # 添加动态显示线程
+        dth = threading.Thread(target=self.DynamicShow,args=())
+        dth.daemon = True
+        dth.start()
+
+    # 追加到文本中
+    def AddToTxt(self):
+        self.FsuUpdatePath = self.FsuPath
+        self.FsuUpdate_oldPath = self.FsuPath
+
+        if os.path.exists(self.FsuUpdatePath + '\FsuUpdate\FsuUpdate'):
+            self.FsuUpdatePath = self.FsuUpdatePath + '\FsuUpdate\FsuUpdate\FsuFirmwareUpdate'
+        else:
+            self.FsuUpdatePath = self.FsuUpdatePath + '\FsuUpdate\FsuFirmwareUpdate'
+        if os.path.exists(self.FsuUpdate_oldPath + '\FsuUpdate_old\FsuUpdate_old'):
+            self.FsuUpdate_oldPath = self.FsuUpdate_oldPath + '\FsuUpdate_old\FsuUpdate_old\FsuFirmwareUpdate'
+        else:
+            self.FsuUpdate_oldPath = self.FsuUpdate_oldPath + '\FsuUpdate_old\FsuFirmwareUpdate'
+
+        self.adtwin.destroy()
+        self.StateText.configure(state='normal')
+        self.StateText.delete(0.0, tk.END)
+        try:
+            with open(self.FsuUpdatePath+'\IntelligentDeviceType.txt','a',encoding='gbk') as f:
+                f.write('\n'+self.dyst)
+            self.StateText.insert(tk.END,'FsuUpdate\IntelligentDeviceType.txt 追加设备成功! \n','green')
+        except:
+            self.StateText.insert(tk.END, 'FsuUpdate\IntelligentDeviceType.txt 追加设备失败! \n', 'red')
+        try:
+            with open(self.FsuUpdate_oldPath+'\IntelligentDeviceType.txt','a',encoding='gbk') as f:
+                f.write('\n'+self.dyst)
+            self.StateText.insert(tk.END,'FsuUpdate_old\IntelligentDeviceType.txt 追加设备成功! ','green')
+        except:
+            self.StateText.insert(tk.END, 'FsuUpdate_old\IntelligentDeviceType.txt 追加设备失败! ', 'red')
+        self.StateText.configure(state='disabled')
+
+    # 动态显示
+    def DynamicShow(self):
+        try:
+            while self.adtwin.state() == 'normal':
+                self.Dnum = self.DevNumEntry.get()
+                self.DName = self.DevNameEntry.get()
+                if self.Dnum != '' and self.DName != '':
+                    self.DType = self.DevTypeCombobox.get()[:1]
+                    self.Other = self.OtherEntry.get().split(',')
+                    self.dyst = "{0}\t{1}\t\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}".format(self.Dnum,self.DName,self.DType,self.Other[0],self.Other[1],self.Other[2],self.Other[3],self.Other[4])
+                    self.ShowAddCodeText.configure(state='normal')
+                    self.ShowAddCodeText.delete(0.0,tk.END)
+                    self.ShowAddCodeText.insert(tk.END,self.dyst)
+                    self.ShowAddCodeText.configure(state='disabled')
+                else:
+                    time.sleep(1)
+                    continue
+                time.sleep(1)
+        except:
+            pass
 
 # 主窗口类
 class Root():
