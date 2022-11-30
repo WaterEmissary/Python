@@ -26,7 +26,9 @@ v1.2    软件更名为 协议编写调试工具
         优化了相关功能
         添加txt转datainfo代码功能
         添加一键生成固件升级包功能
+            添加Fsu地址选择功能
         添加一键追加设备类型功能
+        修改cfg为utf-8格式
 """
 
 # 初始值
@@ -972,7 +974,7 @@ class Txt2Xlx2Cfg():
                                                              initialfile=str(self.SmTypeCode) + '_TT.cfg')  # 获取文件地址
             if self.saveCfgpath == '':
                 return
-            with open(self.saveCfgpath, "w", encoding='gbk') as cfg:
+            with open(self.saveCfgpath, "w", encoding='utf-8') as cfg:
                 #第一行生成
                 cfg.write(";SmType\tSmSubType\tProtocol\tTimeout\tPollingTime\tSmName\n")
                 #第二部分头数据
@@ -2599,7 +2601,9 @@ class OneKeyUpdateSO():
     def __init__(self):
         self.okwin = None
         self.adtwin = None
+        self.acwin = None
         self.DevTypeList = ['1  空调','2  电源','3  油机','4  电表','5  其余','6  读卡器']
+        self.PathDict = {}
         self.SoPath = ''
         self.FsuPath = ''
         self.Dnum = ''
@@ -2619,42 +2623,57 @@ class OneKeyUpdateSO():
             self.okwin.title('一键替换固件升级包')
 
         self.okwin.configure(bd=10)
+
+        self.SoFsuFrame = tk.Frame(self.okwin)
+        self.SoFsuCCfgLabel = tk.Label(self.SoFsuFrame,text='配置列表:',font=tkFont.Font(size=13))
+        self.SoFsuCfgCombobox = ttk.Combobox(self.SoFsuFrame,font=tkFont.Font(size=13),width=25,state='readonly')
+        self.SoFsuCfgAddButton = tk.Button(self.SoFsuFrame,text='新增配置',font=tkFont.Font(size=13),command=self.AddFsuSoCFG)
+        self.SoFsuCfgDelButton = tk.Button(self.SoFsuFrame,text='删除配置',font=tkFont.Font(size=13),command=self.DelFsuSoCFG)
+
         self.SoPromptLabel = tk.Label(self.okwin,text='目标文件应为\App\libpm5kpcm.so',fg='red')
         self.SoPathLabel = tk.Label(self.okwin,text='.so文件地址:',font=tkFont.Font(size=13))
         self.SoPathEntry = tk.Entry(self.okwin,width=70,font=tkFont.Font(size=13),state='disabled')
-        self.FindSoPathButton = tk.Button(self.okwin,text='选择文件',width=15,font=tkFont.Font(size=12),command=self.FindSoPath)
+        # self.FindSoPathButton = tk.Button(self.okwin,text='选择文件',width=15,font=tkFont.Font(size=12),command=self.FindSoPath)
 
         self.FsuPromptLabel = tk.Label(self.okwin,text='\n目标文件夹应包含FsuUpdate、FsuUpdate_old、FsuFirmwareUpdate.sh',fg='red')
         self.FsuPathLabel = tk.Label(self.okwin,text='固件升级包地址:',font=tkFont.Font(size=13))
         self.FsuPathEntry = tk.Entry(self.okwin,width=70,font=tkFont.Font(size=13),state='disabled')
-        self.FindFsuPathButton = tk.Button(self.okwin,text='选择路径',width=15,font=tkFont.Font(size=12),command=self.FindFsuPath)
+        # self.FindFsuPathButton = tk.Button(self.okwin,text='选择路径',width=15,font=tkFont.Font(size=12),command=self.FindFsuPath)
 
         self.StateText = tk.Text(self.okwin,width=95,height=7,state='disabled',spacing3=5,bg='whitesmoke',font=tkFont.Font(size=12))
 
         self.ExecuteFsuButton = tk.Button(self.okwin,text='替换',width=15,font=tkFont.Font(size=12),state='disabled',command=self.ExcuteSOFsu)
-        self.AddDeviceTypeButton = tk.Button(self.okwin,text='追加IntelligentDeviceType.txt',font=tkFont.Font(size=12),command=self.AddDeviceType)
+        self.AddDeviceTypeButton = tk.Button(self.okwin,text='追加IntelligentDeviceType.txt',font=tkFont.Font(size=12),command=self.AddDeviceType,state='disabled')
 
 
         r = 0
-        self.SoPromptLabel.grid(row=r,column=0,columnspan=2)
+        self.SoFsuFrame.grid(row=r,column=0,columnspan=3)
+
+        self.SoFsuCCfgLabel.grid(row=0,column=0)
+        self.SoFsuCfgCombobox.grid(row=1, column=0)
+        self.SoFsuCfgAddButton.grid(row=1, column=1, sticky=tk.W)
+        self.SoFsuCfgDelButton.grid(row=1, column=2, sticky=tk.W)
+
+        r+=1
+        self.SoPromptLabel.grid(row=r,column=0,columnspan=3)
         r+=1
         self.SoPathLabel.grid(row=r,column=0)
-        self.SoPathEntry.grid(row=r,column=1,sticky=tk.W)
+        self.SoPathEntry.grid(row=r,column=1,columnspan=2,sticky=tk.W)
+        # r+=1
+        # self.FindSoPathButton.grid(row=r,column=1,sticky=tk.W,pady=10,padx=120)
         r+=1
-        self.FindSoPathButton.grid(row=r,column=1,sticky=tk.W,pady=10,padx=120)
-        r+=1
-        self.FsuPromptLabel.grid(row=r,column=0,columnspan=2)
+        self.FsuPromptLabel.grid(row=r,column=0,columnspan=3)
         r+=1
         self.FsuPathLabel.grid(row=r,column=0)
-        self.FsuPathEntry.grid(row=r,column=1,sticky=tk.W)
+        self.FsuPathEntry.grid(row=r,column=1,columnspan=2,sticky=tk.W)
+        # r+=1
+        # self.FindFsuPathButton.grid(row=r,column=1,sticky=tk.W,pady=10,padx=120)
         r+=1
-        self.FindFsuPathButton.grid(row=r,column=1,sticky=tk.W,pady=10,padx=120)
-        r+=1
-        self.StateText.grid(row=r,column=0,columnspan=2)
+        self.StateText.grid(row=r,column=0,columnspan=3)
         r+=1
         self.ExecuteFsuButton.grid(row=r,column=1,sticky=tk.W,pady=10,padx=120)
         r += 1
-        self.AddDeviceTypeButton.grid(row=r, column=1, sticky=tk.E)
+        self.AddDeviceTypeButton.grid(row=r, column=2, sticky=tk.E)
 
 
         # Text框文本插入格式
@@ -2667,44 +2686,131 @@ class OneKeyUpdateSO():
         # 路径初始化
         if os.path.exists('./src/fsupath.cfg'):
             with open('./src/fsupath.cfg','r',encoding='utf-8') as f:
-                self.SoPath = f.readline().replace('\n','')
-                self.FsuPath = f.readline().replace('\n','')
-            self.FindSoPath(pt=True)
-            self.FindFsuPath(pt=True)
+                while True:
+                    cfgname = f.readline().replace('\n','')
+                    if cfgname == '':
+                        break
+                    cfgsopath = f.readline().replace('\n','')
+                    cfgfsupath = f.readline().replace('\n','')
+                    self.PathDict[cfgname] = [cfgsopath,cfgfsupath]
+        self.SoFsuCfgCombobox['value'] = list(self.PathDict.keys())
+
+        self.SoFsuCfgCombobox.bind('<<ComboboxSelected>>',self.ChoiceCfg)
+    # 选择配置
+    def ChoiceCfg(self,event):
+        c = self.SoFsuCfgCombobox.get()
+        self.SoPath = self.PathDict[c][0]
+        self.FsuPath = self.PathDict[c][1]
+        self.FindSoPath(obj=self.SoPathEntry,pt=True)
+        self.FindFsuPath(obj=self.FsuPathEntry,pt=True)
+
+    # 新增FSU配置
+    def AddFsuSoCFG(self):
+        try:
+            if self.acwin.state() == 'normal':
+                self.acwin.attributes('-topmost',True)
+                self.acwin.attributes('-topmost',False)
+                return
+        except:
+            self.acwin = tk.Toplevel(rootc.root)
+            self.acwin.title('新增路径配置')
+
+        self.CfgNameLabel = tk.Label(self.acwin,text='配置名称:',font=tkFont.Font(size=13))
+        self.CfgNameEntry = tk.Entry(self.acwin,font=tkFont.Font(size=13),width=25)
+        self.CfgSoPromptLabel = tk.Label(self.acwin, text='目标文件应为\App\libpm5kpcm.so', fg='red')
+        self.CfgSoPathLabel = tk.Label(self.acwin, text='.so文件地址:', font=tkFont.Font(size=13))
+        self.CfgSoPathEntry = tk.Entry(self.acwin, width=70, font=tkFont.Font(size=13), state='disabled')
+        self.CfgFindSoPathButton = tk.Button(self.acwin,text='选择文件',width=15,font=tkFont.Font(size=12),command= lambda:self.FindSoPath(obj=self.CfgSoPathEntry))
+        self.CfgFsuPromptLabel = tk.Label(self.acwin,
+                                       text='\n目标文件夹应包含FsuUpdate、FsuUpdate_old、FsuFirmwareUpdate.sh', fg='red')
+        self.CfgFsuPathLabel = tk.Label(self.acwin, text='固件升级包地址:', font=tkFont.Font(size=13))
+        self.CfgFsuPathEntry = tk.Entry(self.acwin, width=70, font=tkFont.Font(size=13), state='disabled')
+        self.CfgFindFsuPathButton = tk.Button(self.acwin,text='选择路径',width=15,font=tkFont.Font(size=12),command= lambda:self.FindFsuPath(obj=self.CfgFsuPathEntry))
+        self.CfgSureAddButton = tk.Button(self.acwin,text='确认添加',width=15,font=tkFont.Font(size=12),command=self.SureAddCfg)
+
+        cr = 0
+        self.CfgNameLabel.grid(row=cr,column=0)
+        self.CfgNameEntry.grid(row=cr,column=1,sticky=tk.W)
+        self.CfgSureAddButton.grid(row=cr, column=2)
+        cr += 1
+        self.CfgSoPromptLabel.grid(row=cr,column=0,columnspan=3)
+        cr +=1
+        self.CfgSoPathLabel.grid(row=cr,column=0)
+        self.CfgSoPathEntry.grid(row=cr,column=1,columnspan=2)
+        cr += 1
+        self.CfgFindSoPathButton.grid(row=cr,column=1,sticky=tk.W,pady=10,padx=120)
+        cr += 1
+        self.CfgFsuPromptLabel.grid(row=cr,column=0,columnspan=3)
+        cr += 1
+        self.CfgFsuPathLabel.grid(row=cr,column=0)
+        self.CfgFsuPathEntry.grid(row=cr,column=1,columnspan=2)
+        cr += 1
+        self.CfgFindFsuPathButton.grid(row=cr,column=1,sticky=tk.W,pady=10,padx=120)
+
+    # 删除FSU配置
+    def DelFsuSoCFG(self):
+        c = self.SoFsuCfgCombobox.get()
+        try:
+            self.PathDict.pop(c)
+            self.savePath()
+            self.SoFsuCfgCombobox['value'] = list(self.PathDict.keys())
+            if len(self.PathDict) != 0:
+                self.SoFsuCfgCombobox.current(0)
+        except:
+            pass
+
+    # 确认添加配置
+    def SureAddCfg(self):
+        CfgName = self.CfgNameEntry.get()
+        DevSoPath = self.CfgSoPathEntry.get()
+        DevFsuPath = self.CfgFsuPathEntry.get()
+        self.PathDict[CfgName] = [DevSoPath,DevFsuPath]
+        self.acwin.destroy()
+        self.savePath()
+        self.SoFsuCfgCombobox['value'] = list(self.PathDict.keys())
+        self.SoFsuCfgCombobox.current(0)
+        self.okwin.attributes('-topmost',True)
+        self.okwin.attributes('-topmost',False)
+
     # 选择so路径
-    def FindSoPath(self,pt=None):
+    def FindSoPath(self,obj,pt=None):
         if pt == None:
             self.SoPath = filedialog.askopenfilename(title='请打开\App\libpm5kpcm.so文件',filetypes=[("SO文件",".so")])
         if self.SoPath[-13:] == 'libpm5kpcm.so':
-            self.SoPathEntry.configure(state='normal')
-            self.SoPathEntry.delete(0,tk.END)
-            self.SoPathEntry.insert(0,self.SoPath)
-            self.SoPathEntry.configure(state='disabled')
+            obj.configure(state='normal')
+            obj.delete(0,tk.END)
+            obj.insert(0,self.SoPath)
+            obj.configure(state='disabled')
             self.savePath()
         elif self.SoPath == '':
             self.SoPath = ''
-            self.SoPathEntry.configure(state='normal')
-            self.SoPathEntry.delete(0, tk.END)
-            self.SoPathEntry.configure(state='disabled')
+            obj.configure(state='normal')
+            obj.delete(0, tk.END)
+            obj.configure(state='disabled')
         if self.SoPath !='' and self.FsuPath != '':
             self.ExecuteFsuButton.configure(state='normal')
+            self.AddDeviceTypeButton.configure(state='normal')
         else:
             self.ExecuteFsuButton.configure(state='disabled')
+            self.AddDeviceTypeButton.configure(state='disabled')
         self.okwin.attributes('-topmost', True)
         self.okwin.attributes('-topmost', False)
+        if pt == None:
+            self.acwin.attributes('-topmost',True)
+            self.acwin.attributes('-topmost',False)
 
     # 选择FsuUpdate路径
-    def FindFsuPath(self,pt=None):
+    def FindFsuPath(self,obj,pt=None):
         if pt == None:
             self.FsuPath = filedialog.askdirectory(title='请打开FsuFirmwareUpdate.sh所在目录')
         if self.FsuPath != '':
             if os.path.exists(self.FsuPath+'\FsuUpdate'):
                 if os.path.exists(self.FsuPath+'\FsuUpdate_old'):
                     if os.path.exists(self.FsuPath+'\FsuFirmwareUpdate.sh'):
-                        self.FsuPathEntry.configure(state='normal')
-                        self.FsuPathEntry.delete(0,tk.END)
-                        self.FsuPathEntry.insert(0,self.FsuPath)
-                        self.FsuPathEntry.configure(state='disabled')
+                        obj.configure(state='normal')
+                        obj.delete(0,tk.END)
+                        obj.insert(0,self.FsuPath)
+                        obj.configure(state='disabled')
                         self.savePath()
                     else:
                         messagebox.showerror(title='找不到FsuFirmwareUpdate.sh', message='目录中没有FsuFirmwareUpdate.sh!\n请重新选择！')
@@ -2714,15 +2820,20 @@ class OneKeyUpdateSO():
                 messagebox.showerror(title='找不到FsuUpdate',message='目录中没有FsuUpdate!\n请重新选择！')
         else:
             self.FsuPath = ''
-            self.FsuPathEntry.configure(state='normal')
-            self.FsuPathEntry.delete(0, tk.END)
-            self.FsuPathEntry.configure(state='disabled')
+            obj.configure(state='normal')
+            obj.delete(0, tk.END)
+            obj.configure(state='disabled')
         if self.SoPath != '' and self.FsuPath != '':
             self.ExecuteFsuButton.configure(state='normal')
+            self.AddDeviceTypeButton.configure(state='normal')
         else:
             self.ExecuteFsuButton.configure(state='disabled')
+            self.AddDeviceTypeButton.configure(state='disabled')
         self.okwin.attributes('-topmost', True)
         self.okwin.attributes('-topmost', False)
+        if pt == None:
+            self.acwin.attributes('-topmost',True)
+            self.acwin.attributes('-topmost',False)
 
     # 压缩文件
     def do_zip_compress(self,dirpath,lastpath):
@@ -2790,8 +2901,10 @@ class OneKeyUpdateSO():
     # 保存操作路径到文本中
     def savePath(self):
         with open('./src/fsupath.cfg', 'w', encoding='utf-8') as f:
-            f.write(self.SoPath + '\n')
-            f.write(self.FsuPath + '\n')
+            for i in self.PathDict.keys():
+                f.write(i+'\n')
+                f.write(self.PathDict[i][0] + '\n')
+                f.write(self.PathDict[i][1] + '\n')
 
     # 追加IntelligentDeviceType.txt
     def AddDeviceType(self):
