@@ -17,6 +17,7 @@ import xlwt
 import binascii
 import chardet
 from crcmod import mkCrcFun
+from subprocess import run
 
 """更新日志
 v1.0    发布
@@ -29,6 +30,7 @@ v1.2    软件更名为 协议编写调试工具
             添加Fsu地址选择功能
         添加一键追加设备类型功能
         修改cfg为utf-8格式
+v1.3    添加电总发包转十六进制输出
 """
 
 # 初始值
@@ -320,6 +322,10 @@ class ComATcp():
         rootc.ShowRecvText.configure(state='normal')
         rootc.ShowRecvText.insert(tk.END,'[{0}] # RECV HEX FROM<{1}:{2}>\n'.format(time.strftime('%Y-%m-%d %H:%M:%S'), self.ip,public.ComList[self.com-1]), 'grey')
         rootc.ShowRecvText.insert(tk.END,Data+'\n')
+        # 如果是电总输出十六进制版本
+        IsTT = public.YDT1363_3ToHex(Data,True)
+        if IsTT != False:
+            rootc.ShowRecvText.insert(tk.END,IsTT+'\n','lightskyblue')
         rootc.ShowRecvText.yview_moveto(1)
         rootc.ShowRecvText.configure(state='disabled')
 
@@ -1167,7 +1173,8 @@ class SmartRole():
         self.CSendInfoLabel = tk.Label(self.mainFrame,text='回包的内容:',font=tkFont.Font(size=14))
         self.CSendInfoText = tk.Text(self.mainFrame,wrap='word', spacing3=5, width=60, height=3,font=tkFont.Font(size=12))
 
-        self.CSureButton = tk.Button(self.mainFrame,text='确认',font=tkFont.Font(size=12),width=15,command=self.SureCreateRole)
+        self.CSureButton = tk.Button(self.mainFrame,text='添加',font=tkFont.Font(size=12),width=15,command=lambda: self.SureCreateRole)
+        self.CSureAndCloseButton = tk.Button(self.mainFrame,text='添加并关闭',font=tkFont.Font(size=12),width=15,command=lambda:self.SureCreateRole(p=True))
         self.CCancelButton = tk.Button(self.mainFrame,text='取消',font=tkFont.Font(size=12),width=15,command=self.cancelCreateRole)
 
         self.mainFrame.pack()
@@ -1176,10 +1183,11 @@ class SmartRole():
         self.CTrackInfoText.grid(row=1,column=0,columnspan=3)
         self.CSendInfoLabel.grid(row=2,column=0)
         self.CSendInfoText.grid(row=3,column=0,columnspan=3)
-        self.CSureButton.grid(row=4,column=0)
-        self.CCancelButton.grid(row=4,column=1)
+        self.CSureButton.grid(row=4,column=0,pady=10)
+        self.CSureAndCloseButton.grid(row=4,column=1)
+        self.CCancelButton.grid(row=4,column=2)
     # 确认新建规则并添加
-    def SureCreateRole(self):
+    def SureCreateRole(self,p = None):
         TrackInfo = self.CTrackInfoText.get('0.0',tk.END)
         SendInfo = self.CSendInfoText.get('0.0',tk.END)
         TrackInfo = TrackInfo.replace('\n','')
@@ -1189,7 +1197,8 @@ class SmartRole():
         self.RoleList.append((TrackInfo,SendInfo))
         self.showRole(self.RoleList[-1])
         self.RoleListBox.yview_moveto(1)
-        # self.cwin.destroy()
+        if p == True:
+            self.cwin.destroy()
     # 取消新建规则
     def cancelCreateRole(self):
         self.cwin.destroy()
@@ -1257,9 +1266,12 @@ class SmartRole():
 
     # 删除规则
     def DelRole(self,current):
-        c,lc,f,l = self.Currentset(current)
-        self.RoleListBox.delete(f,l)
-        self.RoleList.pop(lc)
+        try:
+            c,lc,f,l = self.Currentset(current)
+            self.RoleListBox.delete(f,l)
+            self.RoleList.pop(lc)
+        except:
+            pass
 
 
     # 保存规则
@@ -1380,7 +1392,7 @@ class CrcCheck():
 
         #校验算法部件
         self.CheckAlgoLabel = tk.Label(self.mainFrame,text='校验算法:',font=tkFont.Font(size=13))
-        self.CheckAlgoComboBox = ttk.Combobox(self.mainFrame)
+        self.CheckAlgoComboBox = ttk.Combobox(self.mainFrame,state='readonly')
         self.CheckAlgoComboBox['value'] = self.CheckAogoComboBoxList
         self.CheckAlgoComboBox.current(0)
 
@@ -2640,10 +2652,19 @@ class OneKeyUpdateSO():
         self.FsuPathEntry = tk.Entry(self.okwin,width=70,font=tkFont.Font(size=13),state='disabled')
         # self.FindFsuPathButton = tk.Button(self.okwin,text='选择路径',width=15,font=tkFont.Font(size=12),command=self.FindFsuPath)
 
-        self.StateText = tk.Text(self.okwin,width=95,height=7,state='disabled',spacing3=5,bg='whitesmoke',font=tkFont.Font(size=12))
+        self.OKUTextFrame = tk.Frame(self.okwin)
+        self.StateText = tk.Text(self.OKUTextFrame,width=95,height=7,wrap='none',state='disabled',spacing3=5,bg='whitesmoke',font=tkFont.Font(size=12))
+        self.StateTextYScr = tk.Scrollbar(self.OKUTextFrame)
+        self.StateTextXScr = tk.Scrollbar(self.OKUTextFrame,orient=tk.HORIZONTAL)
+        self.StateText.configure(yscrollcommand=self.StateTextYScr.set,xscrollcommand=self.StateTextXScr.set)
+        self.StateTextYScr.configure(command=self.StateText.yview)
+        self.StateTextXScr.configure(command=self.StateText.xview)
+
 
         self.ExecuteFsuButton = tk.Button(self.okwin,text='替换',width=15,font=tkFont.Font(size=12),state='disabled',command=self.ExcuteSOFsu)
-        self.AddDeviceTypeButton = tk.Button(self.okwin,text='追加IntelligentDeviceType.txt',font=tkFont.Font(size=12),command=self.AddDeviceType,state='disabled')
+        self.FunctionFrame = tk.Frame(self.okwin)
+        self.OpenFsuPathButton = tk.Button(self.FunctionFrame,text='打开固件升级包位置',font=tkFont.Font(size=12),command=self.OpenFsuFile,state='disabled')
+        self.AddDeviceTypeButton = tk.Button(self.FunctionFrame,text='追加IntelligentDeviceType.txt',font=tkFont.Font(size=12),command=self.AddDeviceType,state='disabled')
 
 
         r = 0
@@ -2669,12 +2690,17 @@ class OneKeyUpdateSO():
         # r+=1
         # self.FindFsuPathButton.grid(row=r,column=1,sticky=tk.W,pady=10,padx=120)
         r+=1
-        self.StateText.grid(row=r,column=0,columnspan=3)
+        self.OKUTextFrame.grid(row=r,column=0,columnspan=3)
+        self.StateTextYScr.pack(fill=tk.Y,side=tk.RIGHT)
+        self.StateTextXScr.pack(fill=tk.X,side=tk.BOTTOM)
+        self.StateText.pack()
         r+=1
         self.ExecuteFsuButton.grid(row=r,column=1,sticky=tk.W,pady=10,padx=120)
         r += 1
-        self.AddDeviceTypeButton.grid(row=r, column=2, sticky=tk.E)
+        self.FunctionFrame.grid(row=r,column=0,columnspan=3,sticky=tk.E)
 
+        self.OpenFsuPathButton.grid(row=0,column=0,sticky=tk.E)
+        self.AddDeviceTypeButton.grid(row=0, column=1, sticky=tk.E)
 
         # Text框文本插入格式
         self.colorlist = ["red", "green"]
@@ -2696,6 +2722,12 @@ class OneKeyUpdateSO():
         self.SoFsuCfgCombobox['value'] = list(self.PathDict.keys())
 
         self.SoFsuCfgCombobox.bind('<<ComboboxSelected>>',self.ChoiceCfg)
+
+    # 打开固件升级包位置
+    def OpenFsuFile(self):
+       os.startfile(self.FsuPath)
+
+
     # 选择配置
     def ChoiceCfg(self,event):
         c = self.SoFsuCfgCombobox.get()
@@ -2756,6 +2788,8 @@ class OneKeyUpdateSO():
             self.SoFsuCfgCombobox['value'] = list(self.PathDict.keys())
             if len(self.PathDict) != 0:
                 self.SoFsuCfgCombobox.current(0)
+            else:
+                self.SoFsuCfgCombobox['value'] = []
         except:
             pass
 
@@ -2776,23 +2810,28 @@ class OneKeyUpdateSO():
     def FindSoPath(self,obj,pt=None):
         if pt == None:
             self.SoPath = filedialog.askopenfilename(title='请打开\App\libpm5kpcm.so文件',filetypes=[("SO文件",".so")])
-        if self.SoPath[-13:] == 'libpm5kpcm.so':
+        if self.SoPath[-13:] == 'libpm5kpcm.so' and os.path.exists(self.SoPath):
             obj.configure(state='normal')
             obj.delete(0,tk.END)
             obj.insert(0,self.SoPath)
             obj.configure(state='disabled')
+            if self.SoPath != '' and self.FsuPath != '':
+                self.ExecuteFsuButton.configure(state='normal')
+                self.AddDeviceTypeButton.configure(state='normal')
+                self.OpenFsuPathButton.configure(state='normal')
+            else:
+                self.ExecuteFsuButton.configure(state='disabled')
+                self.AddDeviceTypeButton.configure(state='disabled')
+                self.OpenFsuPathButton.configure(state='disabled')
             self.savePath()
         elif self.SoPath == '':
             self.SoPath = ''
             obj.configure(state='normal')
             obj.delete(0, tk.END)
             obj.configure(state='disabled')
-        if self.SoPath !='' and self.FsuPath != '':
-            self.ExecuteFsuButton.configure(state='normal')
-            self.AddDeviceTypeButton.configure(state='normal')
         else:
-            self.ExecuteFsuButton.configure(state='disabled')
-            self.AddDeviceTypeButton.configure(state='disabled')
+            messagebox.showerror(title='libpm5kpcm.so路径有误',
+                                 message='libpm5kpcm.so路径有误!\n请重新选择！')
         self.okwin.attributes('-topmost', True)
         self.okwin.attributes('-topmost', False)
         if pt == None:
@@ -2811,6 +2850,14 @@ class OneKeyUpdateSO():
                         obj.delete(0,tk.END)
                         obj.insert(0,self.FsuPath)
                         obj.configure(state='disabled')
+                        if self.SoPath != '' and self.FsuPath != '':
+                            self.ExecuteFsuButton.configure(state='normal')
+                            self.AddDeviceTypeButton.configure(state='normal')
+                            self.OpenFsuPathButton.configure(state='normal')
+                        else:
+                            self.ExecuteFsuButton.configure(state='disabled')
+                            self.AddDeviceTypeButton.configure(state='disabled')
+                            self.OpenFsuPathButton.configure(state='disabled')
                         self.savePath()
                     else:
                         messagebox.showerror(title='找不到FsuFirmwareUpdate.sh', message='目录中没有FsuFirmwareUpdate.sh!\n请重新选择！')
@@ -2823,12 +2870,7 @@ class OneKeyUpdateSO():
             obj.configure(state='normal')
             obj.delete(0, tk.END)
             obj.configure(state='disabled')
-        if self.SoPath != '' and self.FsuPath != '':
-            self.ExecuteFsuButton.configure(state='normal')
-            self.AddDeviceTypeButton.configure(state='normal')
-        else:
-            self.ExecuteFsuButton.configure(state='disabled')
-            self.AddDeviceTypeButton.configure(state='disabled')
+
         self.okwin.attributes('-topmost', True)
         self.okwin.attributes('-topmost', False)
         if pt == None:
@@ -2869,32 +2911,42 @@ class OneKeyUpdateSO():
             self.FsuUpdate_oldPath = self.FsuUpdate_oldPath+'\FsuUpdate_old\FsuFirmwareUpdate'
             self.TrueFsuUpdate_old = '\FsuUpdate_old'
         # 替换
-        t = os.path.getmtime(self.SoPath)
-        t = time.localtime(t)
-        t = time.strftime('%Y-%m-%d %H:%M:%S',t)
         self.StateText.configure(state='normal')
-        self.StateText.delete(0.0,tk.END)
-        self.StateText.insert(tk.END,'libpm5kpcm.so  最后修改时间:   '+t+'\n','green')
+        self.StateText.delete(0.0, tk.END)
+        try:
+            t = os.path.getmtime(self.SoPath)
+            t = time.localtime(t)
+            t = time.strftime('%Y-%m-%d %H:%M:%S',t)
+            self.StateText.insert(tk.END, 'libpm5kpcm.so  最后修改时间:   ' + t + '\n', 'green')
+        except Exception as msg:
+            self.StateText.insert(tk.END, '路径不存在,请检查！'+ '\n'+str(msg)+'\n', 'red')
+            return
         try:
             shutil.copy(self.SoPath,self.FsuUpdatePath)
-            self.StateText.insert(tk.END,self.FsuUpdatePath+'\n\t 替换成功!\n','green')
+            self.StateText.insert(tk.END,self.FsuUpdatePath+'\n')
+            self.StateText.insert(tk.END,'\t 替换成功!\n','green')
         except:
             self.StateText.insert(tk.END,self.FsuUpdatePath+'\n\t 替换失败!\n','red')
+            return
         try:
             shutil.copy(self.SoPath,self.FsuUpdate_oldPath)
-            self.StateText.insert(tk.END, self.FsuUpdate_oldPath + '\n\t 替换成功!\n','green')
+            self.StateText.insert(tk.END, self.FsuUpdate_oldPath + '\n')
+            self.StateText.insert(tk.END, '\t 替换成功!\n','green')
         except:
             self.StateText.insert(tk.END,self.FsuUpdate_oldPath+'\n\t 替换失败!\n','red')
+            return
         try:
             self.do_zip_compress(self.FsuPath+self.TrueFsuUpdate,self.FsuPath+'\FsuUpdate')
             self.StateText.insert(tk.END, 'FsuUpdate 压缩成功!\n', 'green')
         except:
             self.StateText.insert(tk.END,'FsuUpdate 压缩失败!\n','red')
+            return
         try:
             self.do_zip_compress(self.FsuPath+self.TrueFsuUpdate_old,self.FsuPath+'\FsuUpdate_old')
             self.StateText.insert(tk.END, 'FsuUpdate_old 压缩成功!\n','green')
         except:
             self.StateText.insert(tk.END,'FsuUpdate_old 压缩失败!\n','red')
+            return
 
         self.StateText.configure(state='disabled')
 
@@ -2934,8 +2986,13 @@ class OneKeyUpdateSO():
 
         self.ShowAddCodeLabel = tk.Label(self.adtwin,text='生成语句预览:',font=tkFont.Font(size=12))
         self.ShowAddTitleLabel = tk.Label(self.adtwin,text="Type\tDescription\tClass\t其它参数",font=tkFont.Font(size=12))
-        self.ShowAddCodeText = tk.Text(self.adtwin,width=80,height=2,wrap='none',font=tkFont.Font(size=12),bg='whitesmoke',state='disabled')
+        self.ShowAddCodeTextFrame = tk.Frame(self.adtwin)
+        self.ShowAddCodeText = tk.Text(self.ShowAddCodeTextFrame,width=80,height=2,wrap='none',font=tkFont.Font(size=12),bg='whitesmoke',state='disabled')
+        self.ShowAddCodeTextXScr = tk.Scrollbar(self.ShowAddCodeTextFrame,orient=tk.HORIZONTAL)
+        self.ShowAddCodeTextXScr.configure(command=self.ShowAddCodeText.xview)
+        self.ShowAddCodeText.configure(xscrollcommand=self.ShowAddCodeTextXScr.set)
         self.SureAddButton = tk.Button(self.adtwin, text='一键追加',font=tkFont.Font(size=12),command=self.AddToTxt)
+        self.ShowTxtButton = tk.Button(self.adtwin,text='查看文本',font=tkFont.Font(size=12),command=self.ShowTxt)
 
         rb = 0
         self.DevNumLabel.grid(row=rb,column=0,sticky=tk.W)
@@ -2954,9 +3011,13 @@ class OneKeyUpdateSO():
         rb += 1
         self.ShowAddTitleLabel.grid(row=rb, column=0, columnspan=3,sticky=tk.W)
         rb += 1
-        self.ShowAddCodeText.grid(row=rb,column=0,columnspan=3)
+        self.ShowAddCodeTextFrame.grid(row=rb,column=0,columnspan=3)
+        self.ShowAddCodeTextXScr.pack(fill=tk.X,side=tk.BOTTOM)
+        self.ShowAddCodeText.pack()
         rb += 1
         self.SureAddButton.grid(row=rb,column=1)
+        rb += 1
+        self.ShowTxtButton.grid(row=rb,column=2,sticky=tk.E)
 
         # 信息初始化
         self.OtherEntry.insert(0,'1000,7500,1,4,NULL')
@@ -2986,16 +3047,47 @@ class OneKeyUpdateSO():
         try:
             with open(self.FsuUpdatePath+'\IntelligentDeviceType.txt','a',encoding='gbk') as f:
                 f.write('\n'+self.dyst)
+            self.StateText.insert(tk.END,self.FsuPath +'\n')
             self.StateText.insert(tk.END,'FsuUpdate\IntelligentDeviceType.txt 追加设备成功! \n','green')
-        except:
+        except Exception as msg:
+            self.StateText.insert(tk.END, str(msg) +'\n', 'red')
             self.StateText.insert(tk.END, 'FsuUpdate\IntelligentDeviceType.txt 追加设备失败! \n', 'red')
+            return
         try:
             with open(self.FsuUpdate_oldPath+'\IntelligentDeviceType.txt','a',encoding='gbk') as f:
                 f.write('\n'+self.dyst)
+            self.StateText.insert(tk.END, self.FsuPath + '\n')
             self.StateText.insert(tk.END,'FsuUpdate_old\IntelligentDeviceType.txt 追加设备成功! ','green')
-        except:
+        except Exception as msg:
+            self.StateText.insert(tk.END, str(msg) + '\n', 'red')
             self.StateText.insert(tk.END, 'FsuUpdate_old\IntelligentDeviceType.txt 追加设备失败! ', 'red')
+            return
         self.StateText.configure(state='disabled')
+
+    # 查看文本
+    def ShowTxt(self):
+        self.FsuUpdatePath = self.FsuPath
+        self.FsuUpdate_oldPath = self.FsuPath
+
+        if os.path.exists(self.FsuUpdatePath + '\FsuUpdate\FsuUpdate'):
+            self.FsuUpdatePath = self.FsuUpdatePath + '\FsuUpdate\FsuUpdate\FsuFirmwareUpdate'
+        else:
+            self.FsuUpdatePath = self.FsuUpdatePath + '\FsuUpdate\FsuFirmwareUpdate'
+        if os.path.exists(self.FsuUpdate_oldPath + '\FsuUpdate_old\FsuUpdate_old'):
+            self.FsuUpdate_oldPath = self.FsuUpdate_oldPath + '\FsuUpdate_old\FsuUpdate_old\FsuFirmwareUpdate'
+        else:
+            self.FsuUpdate_oldPath = self.FsuUpdate_oldPath + '\FsuUpdate_old\FsuFirmwareUpdate'
+
+        stth1 = threading.Thread(target=lambda :run(self.FsuUpdatePath+'\IntelligentDeviceType.txt',shell=True))
+        stth2 = threading.Thread(target=lambda :run(self.FsuUpdate_oldPath+'\IntelligentDeviceType.txt',shell=True))
+        stth1.daemon = True
+        stth1.start()
+        stth2.daemon = True
+        stth2.start()
+
+        self.adtwin.destroy()
+
+
 
     # 动态显示
     def DynamicShow(self):
@@ -3161,8 +3253,8 @@ class Root():
         # 初始不能使用udp关键字窗口
         rootc.udpKeyEntry.configure(state='disabled')
 
-        # Text框文本插入格式
-        self.colorlist = ["red", "grey", "blue"]
+        # ShowRecvText颜色框文本插入格式
+        self.colorlist = ["red", "grey", "blue","lightskyblue"]
         for i in self.colorlist:
             # 主窗口Text部件颜色
             self.ShowRecvText.tag_add(i,1.0,1.999)
@@ -3308,6 +3400,21 @@ class Public():
             t = str1
         root.clipboard_append(t)
         root.destroy()
+
+    def YDT1363_3ToHex(self,Packge,f):
+        # 电总包转十六进制
+        if f == True:
+            PList = Packge.split()
+            Result = '7E'
+            if PList[0] == '7E' and PList[-1] == '0D':
+                for i in range(1,len(PList)-1,2):
+                    hex1 = chr(int(eval('0x'+PList[i])))
+                    hex2 = chr(int(eval('0x'+PList[i+1])))
+                    Result += ' '+hex1+hex2
+            else:
+                return False
+            Result += ' 0D'
+            return Result
 
 public = Public()
 udplog = Udplog()
