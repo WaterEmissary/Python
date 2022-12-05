@@ -31,6 +31,8 @@ v1.2    软件更名为 协议编写调试工具
         添加一键追加设备类型功能
         修改cfg为utf-8格式
 v1.3    添加电总发包转十六进制输出
+v1.4    CRC16改成组包工具，包括MODBUS和电总组包
+        修复了部分窗口置顶的问题
 """
 
 # 初始值
@@ -723,17 +725,17 @@ class Txt2Xlx2Cfg():
         except:
             pass
         finally:
-            self.txcroot.attributes("-topmost", 0)
             if self.SmTypeCode != 0 and self.DevName != None and self.DevProductor != None:
                 self.ifcheckinfo = True
             else:
                 tk.messagebox.showinfo(title="设备信息错误！",
                                        message="请确认：\n1.设备编号在1-9999之间\n2.输入正确的设备名称和厂家")
-            self.txcroot.attributes("-topmost", 1)
+            self.txcroot.attributes("-topmost", True)
+            self.txcroot.attributes("-topmost", False)
+
 
     # 打开txt文档
     def opentxt(self):
-        self.txcroot.attributes("-topmost", 0)
         self.txtFilepath = filedialog.askopenfilename(filetypes=[('txt File','txt')])  # 获取文件地址
         self.txtpathEntry.configure(state='normal')
         temp = tk.StringVar()
@@ -756,12 +758,11 @@ class Txt2Xlx2Cfg():
             self.txtpathEntry.configure(textvariable=temp)
             self.txtpathEntry.configure(state='disabled')
         self.txt2xlsButton.configure(state='normal')
-        self.txcroot.attributes("-topmost", 1)
-        self.txcroot.attributes("-topmost", 0)
+        self.txcroot.attributes("-topmost", True)
+        self.txcroot.attributes("-topmost", False)
 
     # 打开xls表格
     def openxls(self):
-        self.txcroot.attributes("-topmost", 0)
         self.xlsFilepath = filedialog.askopenfilename(filetypes=[('xls File','xls')])  # 获取文件地址
         self.xlspathEntry.configure(state='normal')
         temp = tk.StringVar()
@@ -784,8 +785,8 @@ class Txt2Xlx2Cfg():
             self.xlspathEntry.configure(textvariable=temp)
             self.xlspathEntry.configure(state='disabled')
         self.xls2cfgButton.configure(state='normal')
-        self.txcroot.attributes("-topmost", 1)
-        self.txcroot.attributes("-topmost", 0)
+        self.txcroot.attributes("-topmost", True)
+        self.txcroot.attributes("-topmost", False)
 
     # 从txt里读取数据
     def readtxt(self):
@@ -812,9 +813,9 @@ class Txt2Xlx2Cfg():
     # 创建xls表格部分
     def createexcel(self):
         if (not self.ifcheckinfo) or self.txtFilepath == '':
-            self.txcroot.attributes("-topmost",False)
             tk.messagebox.showinfo(title="警告!", message="请确认设备信息并打开一个.txt文档！")
             self.txcroot.attributes("-topmost", True)
+            self.txcroot.attributes("-topmost", False)
             return
         textstr = self.readtxt()
         # 999监控设备通信状态
@@ -910,36 +911,33 @@ class Txt2Xlx2Cfg():
         ws2.col(5).width = 256 * 22
         # 生成表格文件
         try:
-            self.txcroot.attributes("-topmost", False)
             self.saveXlspath = filedialog.asksaveasfilename(initialdir='', title='保存xls',
                                                              filetypes=[("Xls File", 'xls')],
                                                              initialfile=self.DevName + '.xls')  # 获取文件地址
             if self.saveXlspath == '':
                 return
             wb.save(self.saveXlspath)
-            self.txcroot.attributes("-topmost", False)
             tlen = len(textstr)
             t = "共 "+str(tlen)+ " 个点"
             tk.messagebox.showinfo(title="成功！",
                                    message=t+"转换成功！\n请手动修改“Attrib”中可写点的值后再转换成cfg文件！")
         except PermissionError:
-            self.txcroot.attributes("-topmost", False)
             tk.messagebox.showinfo(title="错误！",
                                    message="生成文件失败！\n请检查文件是否被占用！")
         except:
-            self.txcroot.attributes("-topmost", False)
             tk.messagebox.showinfo(title="错误！",
                                    message="请检查设备信息和txt文档是否正确！")
         finally:
             self.txcroot.attributes("-topmost", True)
+            self.txcroot.attributes("-topmost", False)
 
 
     # xls表格转cfg
     def xls2cfg(self):
         if (not self.ifcheckinfo) or self.xlsFilepath == '':
-            self.txcroot.attributes("-topmost",False)
             tk.messagebox.showinfo(title="警告!", message="请确认设备信息并打开一个.xls表格！")
-            self.txcroot.attributes("-topmost",True)
+            self.txcroot.attributes("-topmost", True)
+            self.txcroot.attributes("-topmost", False)
             return
         excel = xlrd.open_workbook_xls(self.xlsFilepath)
         try:
@@ -974,7 +972,6 @@ class Txt2Xlx2Cfg():
         tableinfo2[2] = list(map(int, tableinfo2[2]))
 
         try:
-            self.txcroot.attributes("-topmost", False)
             self.saveCfgpath = filedialog.asksaveasfilename(initialdir='', title='保存cfg',
                                                              filetypes=[("CFG File", 'cfg')],
                                                              initialfile=str(self.SmTypeCode) + '_TT.cfg')  # 获取文件地址
@@ -1016,15 +1013,14 @@ class Txt2Xlx2Cfg():
                         cfg.write(temp)
                     cfg.write('\t}')
                 cfg.write('\n}')
-            self.txcroot.attributes("-topmost", False)
             tk.messagebox.showinfo(title="成功！",
                                    message="xls转换cfg成功！请检查数据是否正确！")
         except:
-            self.txcroot.attributes("-topmost", False)
             tk.messagebox.showinfo(title="错误！",
                                    message="请检查设备信息和xls表格是否正确！")
         finally:
             self.txcroot.attributes("-topmost", True)
+            self.txcroot.attributes("-topmost", False)
 
 # txt转DATAINFO类
 class Txt2NodeCode():
@@ -1368,7 +1364,7 @@ class SmartRole():
 # Crc16校验类
 class CrcCheck():
     def __init__(self):
-        self.CheckAogoComboBoxList = ['CRC-16/MODBUS']
+        self.CheckAogoComboBoxList = ['CRC-16/MODBUS协议','YDT1363_3电总协议']
         self.CheckAlgoList = [[16,'0x18005','0xFFFF','0x0000',True]]
         self.window = None
     # 创建窗口函数
@@ -1380,114 +1376,235 @@ class CrcCheck():
                 return
         except:
             self.window = tk.Toplevel(rootc.root)
-            self.window.title('CRC校验工具')
+            self.window.title('组包工具')
 
         self.mainFrame = tk.Frame(self.window,bd=15,pady=5)
-        # 数据类型部件
-        self.DataTypeLabel =tk.Label(self.mainFrame,text='数据类型:',font=tkFont.Font(size=13))
-        self.DataTypeV = tk.IntVar()
-        self.DataTypeV.set(0)
-        self.DataTypeHexRadio = tk.Radiobutton(self.mainFrame,text='Hex',variable=self.DataTypeV,value=0,font=tkFont.Font(size=13))
-        self.DataTypeAsciiRadio = tk.Radiobutton(self.mainFrame,text='Ascii',variable=self.DataTypeV,value=1,font=tkFont.Font(size=13))
-
-        #校验算法部件
-        self.CheckAlgoLabel = tk.Label(self.mainFrame,text='校验算法:',font=tkFont.Font(size=13))
-        self.CheckAlgoComboBox = ttk.Combobox(self.mainFrame,state='readonly')
-        self.CheckAlgoComboBox['value'] = self.CheckAogoComboBoxList
-        self.CheckAlgoComboBox.current(0)
-
-        # 固定数据部分
-        self.WidthLabel = tk.Label(self.mainFrame,text='宽度WIDTH:',font=tkFont.Font(size=10))
-        self.WidthEntry = tk.Entry(self.mainFrame,width=20)
-        self.PolyLabel = tk.Label(self.mainFrame,text='多项式POLY:',font=tkFont.Font(size=10))
-        self.PolyEntry = tk.Entry(self.mainFrame,width=20)
-        self.InitLabel = tk.Label(self.mainFrame,text='初始值INIT:',font=tkFont.Font(size=10))
-        self.InitEntry = tk.Entry(self.mainFrame,width=20)
-        self.XoroutLabel = tk.Label(self.mainFrame,text='异或值XOROUT:',font=tkFont.Font(size=10))
-        self.XoroutEntry = tk.Entry(self.mainFrame,width=20)
-        self.REFINLabel = tk.Label(self.mainFrame,text='输入数据反转',font=tkFont.Font(size=10))
-        self.REFINEntry = tk.Entry(self.mainFrame,width=20)
-        self.REFOUTLabel = tk.Label(self.mainFrame,text='输出数据反转',font=tkFont.Font(size=10))
-        self.REFOUTEntry = tk.Entry(self.mainFrame,width=20)
-
-        # 要校验的数据部分
-        self.CheckDataLabel = tk.Label(self.mainFrame,text='要校验的数据:',font=tkFont.Font(size=13))
-        self.CheckDataText = tk.Text(self.mainFrame,wrap='word',spacing3=5, width=75, height=5,font=tkFont.Font(size=12))
-        self.CrcCheckButton = tk.Button(self.mainFrame,text='crc校验',font=tkFont.Font(size=13),width=20,height=2,command=self.CalcCrc)
-        self.CheckResultLabel = tk.Label(self.mainFrame,text='校验计算结果:',font=tkFont.Font(size=13))
-        self.CheckResultEntry = tk.Entry(self.mainFrame)
-
-        # 校验后数据部分
-        self.CheckResultOutLabel = tk.Label(self.mainFrame,text='加上校验位后的数据:',font=tkFont.Font(size=13))
-        self.CheckResultOutText = tk.Text(self.mainFrame,wrap='word',spacing3=5, width=75, height=3,font=tkFont.Font(size=12),state='disabled')
-        self.CodeResultOutLabel = tk.Label(self.mainFrame,text='C语言代码格式：',font=tkFont.Font(size=13))
-        self.CodeResultOutText = tk.Text(self.mainFrame,wrap='word',spacing3=5, width=75, height=3,font=tkFont.Font(size=12),state='disabled')
-
-        # 添加物件到窗口
-        self.r = 0
-        self.c = 0
-
         self.mainFrame.pack()
 
-        self.DataTypeLabel.grid(row=self.r,column=0)
-        self.DataTypeHexRadio.grid(row=self.r,column=1)
+        #校验算法选择区
+        self.CheckAlgorithmFrame = tk.Frame(self.mainFrame)
+        # 数据类型部件
+        self.DataTypeLabel =tk.Label(self.CheckAlgorithmFrame,text='数据类型:      ',font=tkFont.Font(size=13))
+        self.DataTypeV = tk.IntVar()
+        self.DataTypeV.set(0)
+        self.DataTypeHexRadio = tk.Radiobutton(self.CheckAlgorithmFrame,text='Hex   --(十六进制,不含 0x 或 H ,空格或逗号间隔)',variable=self.DataTypeV,value=0,font=tkFont.Font(size=13))
+        self.DataTypeAsciiRadio = tk.Radiobutton(self.CheckAlgorithmFrame,text='Ascii',variable=self.DataTypeV,value=1,font=tkFont.Font(size=13))
+        #校验算法部件
+        self.CheckAlgoLabel = tk.Label(self.CheckAlgorithmFrame,text='校验算法:      ',font=tkFont.Font(size=13))
+        self.CheckAlgoComboBox = ttk.Combobox(self.CheckAlgorithmFrame,state='readonly')
+        self.CheckAlgoComboBox['value'] = self.CheckAogoComboBoxList
+        self.CheckAlgoComboBox.current(0)
+        # 校验算法选择添加到窗口
+        self.CheckAlgorithmFrame.grid(row=0, column=0)
+        self.c = 0
+        self.DataTypeLabel.grid(row=0, column=0)
+        self.DataTypeHexRadio.grid(row=0, column=1,sticky=tk.W)
         # self.DataTypeAsciiRadio.grid(row=self.r,column=2)
+        self.CheckAlgoLabel.grid(row=1, column=0)
+        self.CheckAlgoComboBox.grid(row=1, column=1,sticky=tk.W)
+
+        # 默认为MODBUS组包,创建窗口
+        self.CreateModbusWin()
+
+        self.CheckAlgoComboBox.bind('<<ComboboxSelected>>', self.checkwhichchoice)
+
+    # 创建MODBUS窗口
+    def CreateModbusWin(self):
+        # MODBUS组包部分
+        self.MODBUSFrame = tk.Frame(self.mainFrame)
+        self.ModBusSetFrame = tk.Frame(self.MODBUSFrame)
+        # 固定数据部分
+        self.WidthLabel = tk.Label(self.ModBusSetFrame, text='宽度WIDTH:', font=tkFont.Font(size=10))
+        self.WidthEntry = tk.Entry(self.ModBusSetFrame, width=20)
+        self.PolyLabel = tk.Label(self.ModBusSetFrame, text='多项式POLY:', font=tkFont.Font(size=10))
+        self.PolyEntry = tk.Entry(self.ModBusSetFrame, width=20)
+        self.InitLabel = tk.Label(self.ModBusSetFrame, text='初始值INIT:', font=tkFont.Font(size=10))
+        self.InitEntry = tk.Entry(self.ModBusSetFrame, width=20)
+        self.XoroutLabel = tk.Label(self.ModBusSetFrame, text='异或值XOROUT:', font=tkFont.Font(size=10))
+        self.XoroutEntry = tk.Entry(self.ModBusSetFrame, width=20)
+        self.REFINLabel = tk.Label(self.ModBusSetFrame, text='输入数据反转', font=tkFont.Font(size=10))
+        self.REFINEntry = tk.Entry(self.ModBusSetFrame, width=20)
+        self.REFOUTLabel = tk.Label(self.ModBusSetFrame, text='输出数据反转', font=tkFont.Font(size=10))
+        self.REFOUTEntry = tk.Entry(self.ModBusSetFrame, width=20)
+
+        # 要校验的数据部分
+        self.CheckDataLabel = tk.Label(self.MODBUSFrame, text='要校验的数据:', font=tkFont.Font(size=13))
+        self.CheckDataText = tk.Text(self.MODBUSFrame, wrap='word', spacing3=5, width=75, height=5,
+                                     font=tkFont.Font(size=12))
+        self.CrcCheckButton = tk.Button(self.MODBUSFrame, text='crc校验', font=tkFont.Font(size=13), width=20,
+                                        height=2, command=self.CalcCrc)
+        self.CheckResultLabel = tk.Label(self.MODBUSFrame, text='校验计算结果:', font=tkFont.Font(size=13))
+        self.CheckResultEntry = tk.Entry(self.MODBUSFrame,state='disabled')
+
+        # 校验后数据部分
+        self.CheckResultOutLabel = tk.Label(self.MODBUSFrame, text='加上校验位后的数据:', font=tkFont.Font(size=13))
+        self.CheckResultOutText = tk.Text(self.MODBUSFrame, wrap='word', spacing3=5, width=75, height=3,
+                                          font=tkFont.Font(size=12), state='disabled')
+        self.CodeResultOutLabel = tk.Label(self.MODBUSFrame, text='C语言代码格式：', font=tkFont.Font(size=13))
+        self.CodeResultOutText = tk.Text(self.MODBUSFrame, wrap='word', spacing3=5, width=75, height=3,
+                                         font=tkFont.Font(size=12), state='disabled')
+
+        self.r = 0
+        self.Space1 = tk.Label(self.MODBUSFrame).grid(row=self.r,column=0)
+
+        self.r += 1
+        self.ModBusSetFrame.grid(row=self.r, column=0,columnspan=3)
+        self.r += 1
+        self.WidthLabel.grid(row=self.r, column=0)
+        self.WidthEntry.grid(row=self.r, column=1)
+        self.PolyLabel.grid(row=self.r, column=2)
+        self.PolyEntry.grid(row=self.r, column=3)
         self.r = self.r + 1
 
-        self.CheckAlgoLabel.grid(row=self.r,column=0)
-        self.CheckAlgoComboBox.grid(row=self.r,column=1)
-        self.r = self.r+1
+        self.InitLabel.grid(row=self.r, column=0)
+        self.InitEntry.grid(row=self.r, column=1)
+        self.XoroutLabel.grid(row=self.r, column=2)
+        self.XoroutEntry.grid(row=self.r, column=3)
+        self.r = self.r + 1
 
-        self.SpaceLabel1 = tk.Label(self.mainFrame,height=1)
-        self.SpaceLabel1.grid(row=self.r,column=0)
+        self.REFINLabel.grid(row=self.r, column=0)
+        self.REFINEntry.grid(row=self.r, column=1)
+        self.REFOUTLabel.grid(row=self.r, column=2)
+        self.REFOUTEntry.grid(row=self.r, column=3)
         self.r += 1
 
-        self.WidthLabel.grid(row=self.r,column=0)
-        self.WidthEntry.grid(row=self.r,column=1)
-        self.PolyLabel.grid(row=self.r,column=2)
-        self.PolyEntry.grid(row=self.r,column=3)
+        self.CheckDataLabel.grid(row=self.r, column=0,sticky=tk.W)
+        self.r = self.r + 1
+        self.CheckDataText.grid(row=self.r, column=0, columnspan=5)
         self.r = self.r + 1
 
-        self.InitLabel.grid(row=self.r,column=0)
-        self.InitEntry.grid(row=self.r,column=1)
-        self.XoroutLabel.grid(row=self.r,column=2)
-        self.XoroutEntry.grid(row=self.r,column=3)
+        self.CrcCheckButton.grid(row=self.r, column=0, columnspan=2)
+        self.CheckResultLabel.grid(row=self.r, column=2)
+        self.CheckResultEntry.grid(row=self.r, column=3)
         self.r = self.r + 1
 
-        self.REFINLabel.grid(row=self.r,column=0)
-        self.REFINEntry.grid(row=self.r,column=1)
-        self.REFOUTLabel.grid(row=self.r,column=2)
-        self.REFOUTEntry.grid(row=self.r,column=3)
+        self.CheckResultOutLabel.grid(row=self.r, column=0)
+        self.r = self.r + 1
+        self.CheckResultOutText.grid(row=self.r, column=0, columnspan=5)
         self.r += 1
-
-        self.SpaceLabel2 = tk.Label(self.mainFrame, height=1)
-        self.SpaceLabel2.grid(row=self.r, column=0)
+        self.CodeResultOutLabel.grid(row=self.r, column=0, sticky=tk.W)
         self.r += 1
-
-        self.CheckDataLabel.grid(row=self.r,column=0)
-        self.r = self.r + 1
-        self.CheckDataText.grid(row=self.r,column=0,columnspan=5)
-        self.r = self.r + 1
-
-        self.CrcCheckButton.grid(row=self.r,column=0,columnspan=2)
-        self.CheckResultLabel.grid(row=self.r,column=2)
-        self.CheckResultEntry.grid(row=self.r,column=3)
-        self.r = self.r + 1
-
-        self.SpaceLabel2 = tk.Label(self.mainFrame, height=1)
-        self.SpaceLabel2.grid(row=self.r, column=0)
-        self.r += 1
-
-        self.CheckResultOutLabel.grid(row=self.r,column=0)
-        self.r = self.r + 1
-        self.CheckResultOutText.grid(row=self.r,column=0,columnspan=5)
-        self.r += 1
-        self.CodeResultOutLabel.grid(row=self.r,column=0,sticky=tk.W)
-        self.r += 1
-        self.CodeResultOutText.grid(row=self.r,column=0,columnspan=5)
-
+        self.CodeResultOutText.grid(row=self.r, column=0, columnspan=5)
         self.setWPIX(event=None)
-        self.CheckAlgoComboBox.bind('<<ComboboxSelected>>', self.setWPIX)
+
+        self.MODBUSFrame.grid(row=2, column=0, columnspan=3)
+
+    # 创建电总窗口
+    def CreateYDT1363_3Win(self):
+        # 创建电总Frame
+        self.YDT1363Frame = tk.Frame(self.mainFrame)
+        self.YDTHeadFrame = tk.Frame(self.YDT1363Frame)
+        self.YDTDataTextFrame = tk.Frame(self.YDT1363Frame)
+        self.YDTInfoFrame = tk.Frame(self.YDT1363Frame)
+        self.YDTMessageTextFrame = tk.Frame(self.YDT1363Frame)
+        self.YDTButtonFrame = tk.Frame(self.YDT1363Frame)
+
+        # 部件定义
+        self.YDTVerLabel = tk.Label(self.YDTHeadFrame,text='VER:       ',font=tkFont.Font(size=12),pady=5)
+        self.YDTAdrLabel = tk.Label(self.YDTHeadFrame,text='ADR:       ',font=tkFont.Font(size=12))
+        self.YDTCID1Label = tk.Label(self.YDTHeadFrame,text='CID1:       ',font=tkFont.Font(size=12))
+        self.YDTCID2Label = tk.Label(self.YDTHeadFrame,text='CID2:       ',font=tkFont.Font(size=12))
+
+        self.YDTVerEntry = tk.Entry(self.YDTHeadFrame,width=10,font=tkFont.Font(size=12))
+        self.YDTAdrEntry = tk.Entry(self.YDTHeadFrame,width=10,font=tkFont.Font(size=12))
+        self.YDTCID1Entry = tk.Entry(self.YDTHeadFrame,width=10,font=tkFont.Font(size=12))
+        self.YDTCID2Entry = tk.Entry(self.YDTHeadFrame,width=10,font=tkFont.Font(size=12))
+
+        self.YDTDataTextLabel = tk.Label(self.YDT1363Frame,text='DATA:',font=tkFont.Font(size=12))
+
+        self.YDTDataText = tk.Text(self.YDTDataTextFrame,wrap='none',spacing3=5, width=75, height=6,font=tkFont.Font(size=12))
+        self.YDTDateYScr = tk.Scrollbar(self.YDTDataTextFrame,command=self.YDTDataText.yview)
+        self.YDTDateXScr = tk.Scrollbar(self.YDTDataTextFrame,command=self.YDTDataText.xview,orient=tk.HORIZONTAL)
+        self.YDTDataText.configure(yscrollcommand=self.YDTDateYScr.set,xscrollcommand=self.YDTDateXScr.set)
+
+        self.YDTDataLenLabel = tk.Label(self.YDTInfoFrame,text='DATA长度:     ',font=tkFont.Font(size=12))
+        self.YDTLENIDLabel = tk.Label(self.YDTInfoFrame, text='LENID:        ', font=tkFont.Font(size=12))
+        self.YDTLCHKSUMLabel = tk.Label(self.YDTInfoFrame,text='LCHKSUM:        ',font=tkFont.Font(size=12))
+        self.YDTLENGTHLabel = tk.Label(self.YDTInfoFrame,text='LENGTH:       ',font=tkFont.Font(size=12))
+        self.YDTSEQUENCELabel = tk.Label(self.YDTInfoFrame,text='字符序列:',font=tkFont.Font(size=12))
+        self.YDTDataLenEntry = tk.Entry(self.YDTInfoFrame,width=10,font=tkFont.Font(size=12),state='disabled')
+        self.YDTLENIDEntry  = tk.Entry(self.YDTInfoFrame,width=10,font=tkFont.Font(size=12),state='disabled')
+        self.YDTLCHKSUMEntry = tk.Entry(self.YDTInfoFrame, width=15, font=tkFont.Font(size=12), state='disabled')
+        self.YDTLENGTHEntry = tk.Entry(self.YDTInfoFrame,width=15, font=tkFont.Font(size=12), state='disabled')
+        self.YDTSEQUENCEEntry = tk.Entry(self.YDTInfoFrame,width=70,font=tkFont.Font(size=12), state='disabled')
+
+        self.YDTMessageTextLabel = tk.Label(self.YDT1363Frame,text='报文:',font=tkFont.Font(size=12))
+
+        self.YDTMessageText = tk.Text(self.YDTMessageTextFrame,wrap='none',spacing3=5, width=75, height=6,font=tkFont.Font(size=12))
+        self.YDTMessageYScr = tk.Scrollbar(self.YDTMessageTextFrame,command=self.YDTMessageText.yview)
+        self.YDTMessageXScr = tk.Scrollbar(self.YDTMessageTextFrame,command=self.YDTMessageText.xview,orient=tk.HORIZONTAL)
+        self.YDTMessageText.configure(yscrollcommand=self.YDTMessageYScr.set,xscrollcommand=self.YDTMessageXScr.set)
+
+        self.YDTPackageButton = tk.Button(self.YDTButtonFrame,text='组包',font=tkFont.Font(size=12),width=15,command=self.YDT1363_3Package)
+        self.YDTParseButton = tk.Button(self.YDTButtonFrame,text='解析',font=tkFont.Font(size=12),width=15,command=self.YDT1363_3Parsing)
+
+        # 显示到屏幕部分
+        self.YDTHeadFrame.grid(row=0, column=0)
+        self.YDTDataTextLabel.grid(row=1, column=0,sticky=tk.W)
+        self.YDTDataTextFrame.grid(row=2,column=0)
+        self.YDTInfoFrame.grid(row=3,column=0)
+        self.YDTMessageTextLabel.grid(row=4,column=0,sticky=tk.W)
+        self.YDTMessageTextFrame.grid(row=5,column=0)
+        self.YDTButtonFrame.grid(row=6,column=0,sticky=tk.E)
+
+        self.YDTVerLabel.grid(row=0,column=0,sticky=tk.W)
+        self.YDTAdrLabel.grid(row=0,column=1,sticky=tk.W)
+        self.YDTCID1Label.grid(row=0,column=2,sticky=tk.W)
+        self.YDTCID2Label.grid(row=0,column=3,sticky=tk.W)
+        self.YDTLENGTHLabel.grid(row=0,column=4,sticky=tk.W)
+        self.YDTVerEntry.grid(row=1,column=0,sticky=tk.W)
+        self.YDTAdrEntry.grid(row=1,column=1,sticky=tk.W)
+        self.YDTCID1Entry.grid(row=1,column=2,sticky=tk.W)
+        self.YDTCID2Entry.grid(row=1,column=3,sticky=tk.W)
+        self.YDTLENGTHEntry.grid(row=1,column=4,sticky=tk.W)
+        self.YDTSEQUENCELabel.grid(row=2,column=0,columnspan=5,sticky=tk.W)
+        self.YDTSEQUENCEEntry.grid(row=3,column=0,columnspan=5,sticky=tk.W)
+
+        self.YDTDateYScr.pack(fill=tk.Y,side=tk.RIGHT)
+        self.YDTDateXScr.pack(fill=tk.X,side=tk.BOTTOM)
+        self.YDTDataText.pack()
+
+        self.YDTDataLenLabel.grid(row=0,column=0,sticky=tk.W)
+        self.YDTLENIDLabel.grid(row=0, column=1, sticky=tk.W)
+        self.YDTLCHKSUMLabel.grid(row=0,column=2,sticky=tk.W)
+        self.YDTDataLenEntry.grid(row=1,column=0,sticky=tk.W)
+        self.YDTLENIDEntry.grid(row=1, column=1, sticky=tk.W)
+        self.YDTLCHKSUMEntry.grid(row=1,column=2,sticky=tk.W)
+
+        self.YDTMessageYScr.pack(side=tk.RIGHT,fill=tk.Y)
+        self.YDTMessageXScr.pack(side=tk.BOTTOM,fill=tk.X)
+        self.YDTMessageText.pack()
+
+        self.YDTPackageButton.grid(row=0,column=0,pady=5)
+        self.YDTParseButton.grid(row=0,column=1)
+
+        self.YDT1363Frame.grid(row=2, column=0, columnspan=3)
+
+        # 数据初始化
+        self.YDTVerEntry.delete(0,tk.END)
+        self.YDTVerEntry.insert(tk.END,'21')
+        self.YDTAdrEntry.delete(0,tk.END)
+        self.YDTAdrEntry.insert(tk.END,'01')
+
+        # self.YDTCID1Entry.insert(tk.END,'02')
+        # self.YDTCID2Entry.insert(tk.END,'03')
+
+    # 检查校验算法
+    def checkwhichchoice(self,event):
+        if self.CheckAlgoComboBox.get() == self.CheckAogoComboBoxList[0]:# MODBUS/Crc16
+            try:
+                self.MODBUSFrame.destroy()
+                self.YDT1363Frame.destroy()
+            except:
+                pass
+            self.CreateModbusWin()
+        elif self.CheckAlgoComboBox.get() == self.CheckAogoComboBoxList[1]:#电总
+            try:
+                self.MODBUSFrame.destroy()
+                self.YDT1363Frame.destroy()
+            except:
+                pass
+            self.CreateYDT1363_3Win()
 
     # 算法关联设置
     def setWPIX(self,event):
@@ -1556,6 +1673,183 @@ class CrcCheck():
         self.CodeResultOutText.insert(0.0,t)
         self.CheckResultOutText.configure(state='disabled')
         self.CodeResultOutText.configure(state='disabled')
+
+    # 电总LCHKSUM计算   返回  SET（LENID,LCHKSUM,高位，低位）
+    def YDT1363_3LCHKSUM(self,datalen):
+        if len(datalen) == 0:
+            return 0,'0x0','00','00'
+        else:
+            self.LENID = len(datalen)*2
+
+        hexlist = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F']
+        D3 = self.LENID >> 8 & 0xF
+        D2 = self.LENID >> 4 & 0xF
+        D1 = self.LENID & 0xF
+        # print(D3,D2,D1)
+        t = D3 + D2 + D1
+        # print(t)
+        rt3 = (t >> 3) & 0x1 ^ 1
+        rt2 = (t >> 2) & 0x1 ^ 1
+        rt1 = (t >> 1) & 0x1 ^ 1
+        rt0 = t & 0x1 ^ 1
+
+        rt = '0b' + str(rt3) + str(rt2) + str(rt1) + str(rt0)
+        # print(rt)
+        rt = eval(rt) + 0x01
+        rlist = "{0:0>4b},{1:0>4b},{2:0>4b},{3:0>4b}".format(rt, D3, D2, D1).split(',')
+        # print(rlist)
+        # print((lenid, hex(eval('0b' + rlist[0])), hexlist[eval('0b' + rlist[0])] + hexlist[eval('0b' + rlist[1])],hexlist[eval('0b' + rlist[2])] + hexlist[eval('0b' + rlist[3])]))
+        return (self.LENID,hex(eval('0b'+rlist[0])),hexlist[eval('0b'+rlist[0])]+hexlist[eval('0b'+rlist[1])],hexlist[eval('0b'+rlist[2])]+hexlist[eval('0b'+rlist[3])])
+
+    # 电总CHKSUM计算
+    def YDT1363_3CHKSUM(self,seq):
+        csum = 0
+        for i in seq:
+            csum += ord(i)
+        csum = csum%65536
+        # print(hex(csum)[2:])
+        sumb='0b'
+        for i in range(15,-1,-1):
+            sumb += str((csum>>i)&0x1^1)
+        # print(hex(eval(sumb))[2:])
+        sumb = eval(sumb) + 0b1
+        # print(hex(sumb)[2:].upper())
+        return hex(sumb)[2:].upper()
+
+
+    # 电总组包
+    def YDT1363_3Package(self):
+        if self.YDTCID1Entry.get() == '' or self.YDTCID2Entry.get() == '':
+            messagebox.showinfo(title='请填写有效的CID!',message='请填写有效的CID!')
+            self.window.attributes('-topmost', True)
+            self.window.attributes('-topmost', False)
+            return
+        # 字符序列
+        self.Sequence = ''
+        # 开头
+        self.overpackage = '7E,'
+        # Ver
+        Vertemp = public.Hex2YDT1363_3(self.YDTVerEntry.get())
+        self.Sequence += self.YDTVerEntry.get()
+        self.overpackage += str(Vertemp[0])+','+str(Vertemp[1])+','
+        # Adr
+        Adrtemp = public.Hex2YDT1363_3(self.YDTAdrEntry.get())
+        self.Sequence+= self.YDTAdrEntry.get()
+        self.overpackage += str(Adrtemp[0])+','+str(Adrtemp[1])+','
+        # CID1
+        cid1temp = public.Hex2YDT1363_3(self.YDTCID1Entry.get())
+        self.Sequence += self.YDTCID1Entry.get()
+        self.overpackage += str(cid1temp[0]) + ',' + str(cid1temp[1]) + ','
+        # CID2
+        cid2temp = public.Hex2YDT1363_3(self.YDTCID2Entry.get())
+        self.Sequence += self.YDTCID2Entry.get()
+        self.overpackage += str(cid2temp[0]) + ',' + str(cid2temp[1]) + ','
+        # DATA 前期处理
+        self.datatemp = self.YDTDataText.get(0.0,tk.END)
+        self.datatemp = self.datatemp.replace('0x','')
+        self.datatemp = self.datatemp.replace(',',' ')
+        self.datatemp = self.datatemp.replace('H','')
+        self.datatemp = self.datatemp.replace('\n','')
+        self.datatemp = self.datatemp.split(' ')
+        while '' in self.datatemp:
+            self.datatemp.pop(self.datatemp.index(''))
+        # print(self.datatemp)
+
+
+        # LENGTH
+        lentemp = self.YDT1363_3LCHKSUM(self.datatemp)
+        # print(lentemp)
+        lengthtemp1 = public.Hex2YDT1363_3(lentemp[2])
+        lengthtemp2 = public.Hex2YDT1363_3(lentemp[3])
+        self.Sequence = self.Sequence + lentemp[2] + lentemp[3]
+        self.overpackage += str(lengthtemp1[0]) +','+str(lengthtemp1[1]) +','
+        self.overpackage += str(lengthtemp2[0]) + ',' + str(lengthtemp2[1]) + ','
+        self.YDTDataLenEntry.configure(state='normal')
+        self.YDTLCHKSUMEntry.configure(state='normal')
+        self.YDTLENIDEntry.configure(state='normal')
+        self.YDTLENGTHEntry.configure(state='normal')
+        self.YDTDataLenEntry.delete(0, tk.END)
+        self.YDTLCHKSUMEntry.delete(0, tk.END)
+        self.YDTLENIDEntry.delete(0, tk.END)
+        self.YDTLENGTHEntry.delete(0,tk.END)
+        self.YDTDataLenEntry.insert(tk.END, str(len(self.datatemp)))
+        self.YDTLENIDEntry.insert(tk.END, str(lentemp[0]))
+        self.YDTLCHKSUMEntry.insert(tk.END, str(int(eval(lentemp[1]))) + '(' + lentemp[1][2:].upper() + 'H' + ')')
+        self.YDTLENGTHEntry.insert(tk.END,str(lengthtemp1[0])+' '+str(lengthtemp1[1])+' '+str(lengthtemp2[0])+' '+str(lengthtemp2[1]))
+        self.YDTDataLenEntry.configure(state='disabled')
+        self.YDTLCHKSUMEntry.configure(state='disabled')
+        self.YDTLENIDEntry.configure(state='disabled')
+        self.YDTLENGTHEntry.configure(state='disabled')
+
+        #DATA
+        for i in self.datatemp:
+            # print(i)
+            temp = public.Hex2YDT1363_3(i)
+            self.overpackage += str(temp[0]) + ',' + str(temp[1]) + ','
+            self.Sequence += i
+
+        # CHKSUM
+        # print(self.Sequence)
+        self.CHKSUM = self.YDT1363_3CHKSUM(self.Sequence)
+        for i in self.CHKSUM:
+            self.overpackage += str(public.Hex2YDT1363_3(i))+ ','
+        self.YDTSEQUENCEEntry.configure(state='normal')
+        self.YDTSEQUENCEEntry.delete(0,tk.END)
+        self.YDTSEQUENCEEntry.insert(tk.END,'~'+self.Sequence+self.CHKSUM+'CR')
+        self.YDTSEQUENCEEntry.configure(state='disabled')
+
+        # 0D
+        self.overpackage += '0D'
+        # 完成
+        # print(self.overpackage)
+        self.YDTMessageText.delete(0.0,tk.END)
+        self.YDTMessageText.insert(tk.END,self.overpackage)
+
+    # 电总解析
+    def YDT1363_3Parsing(self):
+        self.package = self.YDTMessageText.get(0.0,tk.END)
+        self.Parspackage = public.YDT1363_3ToHex(self.package,f=True).split()
+
+        self.YDTVerEntry.delete(0,tk.END)
+        self.YDTAdrEntry.delete(0,tk.END)
+        self.YDTCID1Entry.delete(0,tk.END)
+        self.YDTCID2Entry.delete(0,tk.END)
+        self.YDTVerEntry.insert(tk.END,self.Parspackage[1])
+        self.YDTAdrEntry.insert(tk.END,self.Parspackage[2])
+        self.YDTCID1Entry.insert(tk.END,self.Parspackage[3])
+        self.YDTCID2Entry.insert(tk.END,self.Parspackage[4])
+
+        lchksum = '0x'+self.Parspackage[5][0].upper()
+        lenid = '0x'+self.Parspackage[5][1]+self.Parspackage[6]
+        lengthtemp1 = public.Hex2YDT1363_3(self.Parspackage[5])
+        lengthtemp2 = public.Hex2YDT1363_3(self.Parspackage[6])
+
+        self.YDTDataLenEntry.configure(state='normal')
+        self.YDTLCHKSUMEntry.configure(state='normal')
+        self.YDTLENIDEntry.configure(state='normal')
+        self.YDTLENGTHEntry.configure(state='normal')
+        self.YDTSEQUENCEEntry.configure(state='normal')
+        self.YDTDataLenEntry.delete(0, tk.END)
+        self.YDTLCHKSUMEntry.delete(0, tk.END)
+        self.YDTLENIDEntry.delete(0, tk.END)
+        self.YDTLENGTHEntry.delete(0, tk.END)
+        self.YDTSEQUENCEEntry.delete(0,tk.END)
+        self.YDTDataLenEntry.insert(tk.END, str(int(eval(lenid)) // 2))
+        self.YDTLENIDEntry.insert(tk.END,str(int(eval(lenid))))
+        self.YDTLCHKSUMEntry.insert(tk.END,str(int(eval(lchksum)))+str(eval(lchksum))[2:]+'('+lchksum[2:]+'H)')
+        self.YDTLENGTHEntry.insert(tk.END, str(lengthtemp1[0]) + ' ' + str(lengthtemp1[1]) + ' ' + str(
+            lengthtemp2[0]) + ' ' + str(lengthtemp2[1]))
+        self.YDTSEQUENCEEntry.insert(tk.END,'~'+"".join(self.Parspackage[1:-1])+'CR')
+        self.YDTDataLenEntry.configure(state='disabled')
+        self.YDTLCHKSUMEntry.configure(state='disabled')
+        self.YDTLENIDEntry.configure(state='disabled')
+        self.YDTLENGTHEntry.configure(state='disabled')
+        self.YDTSEQUENCEEntry.configure(state='disabled')
+
+
+        data = self.Parspackage[7:-3]
+        self.YDTDataText.delete(0.0,tk.END)
+        self.YDTDataText.insert(tk.END," ".join(data))
 
 
 # 设置常用IP地址类
@@ -1986,6 +2280,8 @@ class WbLuaTool():
         if i == True:
             ask = tk.messagebox.askyesno(title='是否初始化配置？',message='将丢失所有已配置的内容，是否继续？')
             if ask == False:
+                self.win.attributes('-topmost', True)
+                self.win.attributes('-topmost', False)
                 return
         self.DevTypeCodeList = []
         self.DevModelList = []
@@ -3145,7 +3441,7 @@ class Root():
         self.SmartSendButton = tk.Button( self.LeftFrame, text='开启', width=10,command=modbustcp.smartsendinfo)
 
         self.FunctionLabel = tk.Label(self.LeftFrame,text='扩展功能',font=tkFont.Font(size=13,weight='bold'),fg='royalblue')
-        self.CRCButton = tk.Button(self.LeftFrame, text='CRC校验', width=17, font=tkFont.Font(size=13),command=crc.createwindos)
+        self.CRCButton = tk.Button(self.LeftFrame, text='MODBUS/电总组包', width=17, font=tkFont.Font(size=13),command=crc.createwindos)
         self.Txt2NodeCodeButton = tk.Button(self.LeftFrame,text='txt转DATAINFO',width=17, font=tkFont.Font(size=13),command=t2n.CreateWin)
         self.Txt2Xlx2CfgButton = tk.Button(self.LeftFrame, text='txt转xlx及cfg', width=17, font=tkFont.Font(size=13),
                                            command=t2x2c.txt2xlx2cfgroot)
@@ -3279,7 +3575,7 @@ class Public():
         self.IfGetInfo = False
         self.IfSendSmartInfo = False
 
-        self.Auther = 'V1.2\tAuther by Zx'
+        self.Auther = 'V1.4\tAuther by Zx'
 
     # 初始化常用List
     def initCFG(self):
@@ -3401,20 +3697,32 @@ class Public():
         root.clipboard_append(t)
         root.destroy()
 
+    # 电总包转十六进制
     def YDT1363_3ToHex(self,Packge,f):
-        # 电总包转十六进制
         if f == True:
-            PList = Packge.split()
+            Packge = Packge.replace('\n','')
+            if ' ' in Packge:
+                self.PList = Packge.split(' ')
+            elif ',' in Packge:
+                self.PList = Packge.split(',')
+            # print(self.PList)
             Result = '7E'
-            if PList[0] == '7E' and PList[-1] == '0D':
-                for i in range(1,len(PList)-1,2):
-                    hex1 = chr(int(eval('0x'+PList[i])))
-                    hex2 = chr(int(eval('0x'+PList[i+1])))
+            if self.PList[0] == '7E' and self.PList[-1] == '0D':
+                for i in range(1,len(self.PList)-1,2):
+                    hex1 = chr(int(eval('0x'+self.PList[i])))
+                    hex2 = chr(int(eval('0x'+self.PList[i+1])))
                     Result += ' '+hex1+hex2
             else:
                 return False
             Result += ' 0D'
             return Result
+
+    # 单十六进制转电总数字
+    def Hex2YDT1363_3(self,h):
+        if len(h) == 1:
+            return hex(ord(h))[2:]
+        elif len(h)==2:
+            return hex(ord(h[0]))[2:],hex(ord(h[1]))[2:]
 
 public = Public()
 udplog = Udplog()
