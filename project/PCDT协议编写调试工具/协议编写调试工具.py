@@ -1169,7 +1169,7 @@ class SmartRole():
         self.CSendInfoLabel = tk.Label(self.mainFrame,text='回包的内容:',font=tkFont.Font(size=14))
         self.CSendInfoText = tk.Text(self.mainFrame,wrap='word', spacing3=5, width=60, height=3,font=tkFont.Font(size=12))
 
-        self.CSureButton = tk.Button(self.mainFrame,text='添加',font=tkFont.Font(size=12),width=15,command=lambda: self.SureCreateRole)
+        self.CSureButton = tk.Button(self.mainFrame,text='添加',font=tkFont.Font(size=12),width=15,command=lambda: self.SureCreateRole())
         self.CSureAndCloseButton = tk.Button(self.mainFrame,text='添加并关闭',font=tkFont.Font(size=12),width=15,command=lambda:self.SureCreateRole(p=True))
         self.CCancelButton = tk.Button(self.mainFrame,text='取消',font=tkFont.Font(size=12),width=15,command=self.cancelCreateRole)
 
@@ -3288,7 +3288,9 @@ class OneKeyUpdateSO():
         self.ShowAddCodeTextXScr.configure(command=self.ShowAddCodeText.xview)
         self.ShowAddCodeText.configure(xscrollcommand=self.ShowAddCodeTextXScr.set)
         self.SureAddButton = tk.Button(self.adtwin, text='一键追加',font=tkFont.Font(size=12),command=self.AddToTxt)
-        self.ShowTxtButton = tk.Button(self.adtwin,text='查看文本',font=tkFont.Font(size=12),command=self.ShowTxt)
+        self.ShowTextFrame = tk.Frame(self.adtwin,bd=5)
+        self.ShowTxtButton = tk.Button(self.ShowTextFrame,text='查看FsuUpdate文本',font=tkFont.Font(size=12),command=self.ShowTxt)
+        self.ShowoldTxtButton = tk.Button(self.ShowTextFrame,text='查看FsuUpdate_old文本',font=tkFont.Font(size=12),command=lambda:self.ShowTxt(f='old'))
 
         rb = 0
         self.DevNumLabel.grid(row=rb,column=0,sticky=tk.W)
@@ -3313,7 +3315,9 @@ class OneKeyUpdateSO():
         rb += 1
         self.SureAddButton.grid(row=rb,column=1)
         rb += 1
-        self.ShowTxtButton.grid(row=rb,column=2,sticky=tk.E)
+        self.ShowTextFrame.grid(row=rb,column=0,columnspan=4,sticky=tk.E)
+        self.ShowTxtButton.grid(row=0,column=1,sticky=tk.E)
+        self.ShowoldTxtButton.grid(row=0,column=2,sticky=tk.E)
 
         # 信息初始化
         self.OtherEntry.insert(0,'1000,7500,1,4,NULL')
@@ -3361,25 +3365,25 @@ class OneKeyUpdateSO():
         self.StateText.configure(state='disabled')
 
     # 查看文本
-    def ShowTxt(self):
-        self.FsuUpdatePath = self.FsuPath
-        self.FsuUpdate_oldPath = self.FsuPath
-
-        if os.path.exists(self.FsuUpdatePath + '\FsuUpdate\FsuUpdate'):
-            self.FsuUpdatePath = self.FsuUpdatePath + '\FsuUpdate\FsuUpdate\FsuFirmwareUpdate'
-        else:
-            self.FsuUpdatePath = self.FsuUpdatePath + '\FsuUpdate\FsuFirmwareUpdate'
-        if os.path.exists(self.FsuUpdate_oldPath + '\FsuUpdate_old\FsuUpdate_old'):
-            self.FsuUpdate_oldPath = self.FsuUpdate_oldPath + '\FsuUpdate_old\FsuUpdate_old\FsuFirmwareUpdate'
-        else:
-            self.FsuUpdate_oldPath = self.FsuUpdate_oldPath + '\FsuUpdate_old\FsuFirmwareUpdate'
-
-        stth1 = threading.Thread(target=lambda :run(self.FsuUpdatePath+'\IntelligentDeviceType.txt',shell=True))
-        stth2 = threading.Thread(target=lambda :run(self.FsuUpdate_oldPath+'\IntelligentDeviceType.txt',shell=True))
-        stth1.daemon = True
-        stth1.start()
-        stth2.daemon = True
-        stth2.start()
+    def ShowTxt(self,f = 'None'):
+        if f == 'None':
+            self.FsuUpdatePath = self.FsuPath
+            if os.path.exists(self.FsuUpdatePath + '\FsuUpdate\FsuUpdate'):
+                self.FsuUpdatePath = self.FsuUpdatePath + '\FsuUpdate\FsuUpdate\FsuFirmwareUpdate'
+            else:
+                self.FsuUpdatePath = self.FsuUpdatePath + '\FsuUpdate\FsuFirmwareUpdate'
+            stth1 = threading.Thread(target=lambda: run(self.FsuUpdatePath + '\IntelligentDeviceType.txt', shell=True))
+            stth1.daemon = True
+            stth1.start()
+        elif f == 'old':
+            self.FsuUpdate_oldPath = self.FsuPath
+            if os.path.exists(self.FsuUpdate_oldPath + '\FsuUpdate_old\FsuUpdate_old'):
+                self.FsuUpdate_oldPath = self.FsuUpdate_oldPath + '\FsuUpdate_old\FsuUpdate_old\FsuFirmwareUpdate'
+            else:
+                self.FsuUpdate_oldPath = self.FsuUpdate_oldPath + '\FsuUpdate_old\FsuFirmwareUpdate'
+            stth2 = threading.Thread(target=lambda :run(self.FsuUpdate_oldPath+'\IntelligentDeviceType.txt',shell=True))
+            stth2.daemon = True
+            stth2.start()
 
         self.adtwin.destroy()
 
