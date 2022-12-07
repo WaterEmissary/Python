@@ -28,7 +28,7 @@ class MSWin:
 
         # 头部信息定义
         self.headFrame = tk.Frame(self.mswin)
-        self.ConnectStateFrame = tk.Frame(self.headFrame)
+        self.ConnectStateFrame = tk.Frame(self.headFrame,bd=5)
         self.MysqlConnectStateLabel = tk.Label(self.ConnectStateFrame,text='ConnectState:')
         self.MysqlConnectStateInfoLabel = tk.Label(self.ConnectStateFrame,text='未连接',fg='red')
         self.CUSLabel = tk.Label(self.headFrame,text='可用资金:\t    ',font=tk.font.Font(size=13))
@@ -36,7 +36,7 @@ class MSWin:
         self.LKCLabel = tk.Label(self.headFrame,text='锁定资金:',font=tk.font.Font(size=13))
 
         # 资产信息定义
-        self.CapitalFrame = tk.Frame(self.mswin)
+        self.CapitalFrame = tk.Frame(self.mswin,bd=5)
         self.CUSListBoxFrame = tk.Frame(self.CapitalFrame)
         self.FBCListBoxFrame = tk.Frame(self.CapitalFrame)
         self.LKCListBoxFrame = tk.Frame(self.CapitalFrame)
@@ -53,12 +53,14 @@ class MSWin:
         self.LKCSumInfoLabel = tk.Label(self.CapitalFrame, text='',font=tk.font.Font(size=13))
 
         # 其它信息定义
-        self.DataInfoFrame = tk.Frame(self.mswin)
+        self.DataInfoFrame = tk.Frame(self.mswin,bd=5)
         self.ALLSumLabel = tk.Label(self.DataInfoFrame,text='全部总计:',font=tk.font.Font(size=13))
         self.ALLSumInfoLabel = tk.Label(self.DataInfoFrame,text='',font=tk.font.Font(size=13))
+        self.CanUseSumLabel = tk.Label(self.DataInfoFrame,text='可用总计:',font=tk.font.Font(size=13))
+        self.CanUseSumInfoLabel = tk.Label(self.DataInfoFrame,text='',font=tk.font.Font(size=13))
 
         # 功能区
-        self.FunctionFrame = tk.Frame(self.mswin)
+        self.FunctionFrame = tk.Frame(self.mswin,bd=5)
         self.CreateNewCapitalButton = tk.Button(self.FunctionFrame,text='新建资金')
         self.UpdateCaptialButton = tk.Button(self.FunctionFrame,text='修改资金',command=self.Updatewin)
 
@@ -92,8 +94,12 @@ class MSWin:
         self.LKCSumInfoLabel.grid(row=1,column=5,sticky=tk.W)
 
             # 其它信息
-        self.ALLSumLabel.grid(row=0,column=0)
-        self.ALLSumInfoLabel.grid(row=0,column=1)
+        ro = 0
+        self.ALLSumLabel.grid(row=ro,column=0)
+        self.ALLSumInfoLabel.grid(row=ro,column=1)
+        tk.Label(self.DataInfoFrame,text='\t\t').grid(row=ro,column=2)
+        self.CanUseSumLabel.grid(row=ro,column=3)
+        self.CanUseSumInfoLabel.grid(row=ro,column=4)
 
             # 功能按钮
         fr = 0
@@ -219,11 +225,16 @@ class MSWin:
     def cualall(self):
         self.allsum = self.CUSSum+self.FBCSum+self.LKCSum
         self.ALLSumInfoLabel.configure(text="{:.2f}".format(self.allsum))
+        self.canusesum = self.CUSSum + self.FBCSum
+        self.CanUseSumInfoLabel.configure(text="{:.2f}".format(self.canusesum))
 
     # 更新所有数据
     def updateall(self):
+        # 更新ListBox信息
         sqc.InitDataFromDB()
+        # 单项求合
         self.UpdateSum()
+        #
         self.cualall()
 
 # 数据库控制模块

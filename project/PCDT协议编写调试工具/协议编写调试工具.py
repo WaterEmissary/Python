@@ -895,9 +895,7 @@ class Txt2Xlx2Cfg():
             ws2.write(i + 1, 1, int(textstr[i][2]), sfont)  # NodeNo
             ws2.write(i + 1, 4, int(textstr[i][2]), sfont)  # NodeID
             ws2.write(i + 1, 5, textstr[i][3], sfont)  # NodeName
-            ws2.write(i + 1, 6,
-                      int(''.join(list(filter(str.isdigit, textstr[i][3])))) if textstr[i][3][-1].isdigit() else 0,
-                      sfont)  # ModNo
+            ws2.write(i + 1, 6, 0,sfont)  # ModNo
             ws2.write(i + 1, 7, 33 if textstr[i][4] == '1' else 17, sfont)  # Attrib(需手动修改可写点的值)
             ws2.write(i + 1, 8, int(textstr[i][4]), sfont)  # NodeLength
             ws2.write(i + 1, 9, 1, sfont)  # Offset
@@ -913,20 +911,24 @@ class Txt2Xlx2Cfg():
         try:
             self.saveXlspath = filedialog.asksaveasfilename(initialdir='', title='保存xls',
                                                              filetypes=[("Xls File", 'xls')],
-                                                             initialfile=self.DevName + '.xls')  # 获取文件地址
+                                                             initialfile=str(self.SmTypeCode)+self.DevProductor+self.DevName + '.xls')  # 获取文件地址
             if self.saveXlspath == '':
                 return
             wb.save(self.saveXlspath)
             tlen = len(textstr)
             t = "共 "+str(tlen)+ " 个点"
-            tk.messagebox.showinfo(title="成功！",
-                                   message=t+"转换成功！\n请手动修改“Attrib”中可写点的值后再转换成cfg文件！")
+            if tk.messagebox.askyesno(title="成功！",
+                                   message=t+"转换成功！\n请手动修改“Attrib”中可写点的值后再转换成cfg文件！") == True:
+                print(self.saveXlspath)
+                run(self.saveXlspath,shell=True)
+            else:
+                pass
         except PermissionError:
             tk.messagebox.showinfo(title="错误！",
                                    message="生成文件失败！\n请检查文件是否被占用！")
-        except:
+        except Exception as msg:
             tk.messagebox.showinfo(title="错误！",
-                                   message="请检查设备信息和txt文档是否正确！")
+                                   message=str(msg))
         finally:
             self.txcroot.attributes("-topmost", True)
             self.txcroot.attributes("-topmost", False)
