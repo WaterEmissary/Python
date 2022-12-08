@@ -224,6 +224,7 @@ class MSWin:
         CaluHisth.start()
             # 计算730天信息
         self.CaluTable730()
+        ll.login.destroy()
         self.mswin.mainloop()
 
 
@@ -530,12 +531,12 @@ class MSWin:
 # 数据库控制模块
 class SqlCtrl:
     def __init__(self):
-        self.host = '47.100.198.216'
+        self.host = '1.116.154.14'
         self.user = 'root'
-        self.password = 'rootrootroot'
+        self.password = 'rootroot'
         self.database = 'mydb'
         self.charset = 'utf8'
-        self.userdb = 'mysalary'
+        self.userdb = 'testtest'
     # 连接到数据库
     def Connect2Sql(self):
         try:
@@ -556,6 +557,11 @@ class SqlCtrl:
         except Exception as msg:
             print('ERROR:'+str(msg))
             return False
+
+    # 获取用户名
+    def logindb(self,nm):
+        self.userdb = nm
+        msw.CreateWin()
 
 
     # 检查数据库是否存在
@@ -726,10 +732,25 @@ class SqlCtrl:
         except Exception as msg:
             print(str(msg))
 
+class Login():
+    def __init__(self):
+        ...
+    def Createlogin(self):
+        self.login = tk.Tk()
+        self.login.title('登录')
+        self.loginLabel = tk.Label(self.login, text='用户名:')
+        self.loginEntry = tk.Entry(self.login)
+        self.loginButton = tk.Button(self.login, text='登录', command=lambda:sqc.logindb(self.loginEntry.get()))
+        self.loginLabel.grid(row=0, column=0)
+        self.loginEntry.grid(row=1, column=0)
+        self.loginButton.grid(row=2, column=0)
+        self.login.mainloop()
+
 
 msw = MSWin()
 sqc = SqlCtrl()
-msw.CreateWin()
+ll = Login()
+ll.Createlogin()
 
 
 # 关闭程序后记录变化
