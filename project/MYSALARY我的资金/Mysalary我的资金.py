@@ -80,8 +80,17 @@ class MSWin:
         self.CurrentDataInfoLabel = tk.Label(self.DataInfoFrame,text='未选择',font=tk.font.Font(size=13),fg='cornflowerblue')
         self.ALLSumLabel = tk.Label(self.DataInfoFrame,text='全部总计:',font=tk.font.Font(size=13),fg='lightcoral')
         self.ALLSumInfoLabel = tk.Label(self.DataInfoFrame,text='',font=tk.font.Font(size=13),fg='lightcoral')
+        self.ALLSum7Label = tk.Label(self.DataInfoFrame,text='全部7天净值:',font=tk.font.Font(size=13),fg='lightcoral')
+        self.ALLSum7InfoLabel = tk.Label(self.DataInfoFrame,text='',font=tk.font.Font(size=13),fg='lightcoral')
+        self.ALLSum30Label = tk.Label(self.DataInfoFrame,text='全部30天净值:',font=tk.font.Font(size=13),fg='lightcoral')
+        self.ALLSum30InfoLable = tk.Label(self.DataInfoFrame,text='',font=tk.font.Font(size=13),fg='lightcoral')
+
         self.CanUseSumLabel = tk.Label(self.DataInfoFrame,text='可用总计:',font=tk.font.Font(size=13),fg='indianred')
         self.CanUseSumInfoLabel = tk.Label(self.DataInfoFrame,text='',font=tk.font.Font(size=13),fg='indianred')
+        self.CanUseSum7Label = tk.Label(self.DataInfoFrame,text='可用7天净值:',font=tk.font.Font(size=13),fg='indianred')
+        self.CanUseSum7InfoLabel = tk.Label(self.DataInfoFrame,text='',font=tk.font.Font(size=13),fg='indianred')
+        self.CanUseSum30Label = tk.Label(self.DataInfoFrame,text='可用30天净值:',font=tk.font.Font(size=13),fg='indianred')
+        self.CanUseSum30InfoLabel = tk.Label(self.DataInfoFrame,text='',font=tk.font.Font(size=13),fg='indianred')
 
         self.CurrentTableS7Label = tk.Label(self.DataInfoFrame,text='选中表7天收入:',font=tk.font.Font(size=13),fg='red')
         self.CurrentTablleS7InfoLabel = tk.Label(self.DataInfoFrame,text='',font=tk.font.Font(size=13),fg='red')
@@ -158,9 +167,18 @@ class MSWin:
         ro += 1
         self.ALLSumLabel.grid(row=ro,column=0,sticky=tk.W)
         self.ALLSumInfoLabel.grid(row=ro,column=1,sticky=tk.W)
+        self.ALLSum7Label.grid(row=ro,column=2,sticky=tk.W)
+        self.ALLSum7InfoLabel.grid(row=ro,column=3,sticky=tk.W)
+        self.ALLSum30Label.grid(row=ro,column=4,sticky=tk.W)
+        self.ALLSum30InfoLable.grid(row=ro,column=5,sticky=tk.W)
         # tk.Label(self.DataInfoFrame,text='\t\t').grid(row=ro,column=2)
-        self.CanUseSumLabel.grid(row=ro,column=2,sticky=tk.W)
-        self.CanUseSumInfoLabel.grid(row=ro,column=3,sticky=tk.W)
+        ro += 1
+        self.CanUseSumLabel.grid(row=ro,column=0,sticky=tk.W)
+        self.CanUseSumInfoLabel.grid(row=ro,column=1,sticky=tk.W)
+        self.CanUseSum7Label.grid(row=ro,column=2,sticky=tk.W)
+        self.CanUseSum7InfoLabel.grid(row=ro,column=3,sticky=tk.W)
+        self.CanUseSum30Label.grid(row=ro,column=4,sticky=tk.W)
+        self.CanUseSum30InfoLabel.grid(row=ro,column=5,sticky=tk.W)
         ro += 1
         self.CurrentTableS7Label.grid(row=ro,column=0,sticky=tk.W)
         self.CurrentTablleS7InfoLabel.grid(row=ro,column=1,sticky=tk.W)
@@ -212,8 +230,10 @@ class MSWin:
         else:
             self.MysqlConnectStateInfoLabel.configure(text='连接失败',fg='red')
             return
-            # 更新所有信息
+
+        # 更新所有信息
         self.updateall()
+
             # 初始化操作记录
         InitOpHistoryth = threading.Thread(target=self.InitOpHistory(),args=())
         InitOpHistoryth.daemon = True
@@ -222,6 +242,7 @@ class MSWin:
         CaluHisth = threading.Thread(target=self.CaluHistoryInformation(),args=())
         CaluHisth.daemon =True
         CaluHisth.start()
+
             # 计算730天信息
         self.CaluTable730()
         self.mswin.mainloop()
@@ -413,9 +434,7 @@ class MSWin:
             elif self.CurrectListBox == list(self.tableDict.keys())[2]:
                 self.before = self.LockedCapitalDict[self.CurrectData]
                 self.LockedHisDict[self.CurrectData] += float(f) - self.before
-            self.CUSListBox.delete(0,tk.END)
-            self.FBCListBox.delete(0,tk.END)
-            self.LKCListBox.delete(0,tk.END)
+
             self.updateall()
 
         self.updwin.destroy()
@@ -423,21 +442,43 @@ class MSWin:
     # 其它数据计算
     def cualall(self):
         try:
-            if not str(self.CUSSum).isdigit():
-                self.CUSSum = 0
-            if not str(self.FBCSum).isdigit():
-                self.CUSSum = 0
-            if not str(self.LKCSum).isdigit():
-                self.CUSSum = 0
+            # print(str(self.CUSSum).isdigit())
+            # if not str(self.CUSSum).isdigit():
+            #     self.CUSSum = 0
+            # if not str(self.FBCSum).isdigit():
+            #     self.FBCSum = 0
+            # if not str(self.LKCSum).isdigit():
+            #     self.LKCSum = 0
             self.allsum = self.CUSSum+self.FBCSum+self.LKCSum
             self.ALLSumInfoLabel.configure(text="{:.2f}".format(self.allsum))
             self.canusesum = self.CUSSum + self.FBCSum
             self.CanUseSumInfoLabel.configure(text="{:.2f}".format(self.canusesum))
+            # 可用730净收入计算
+            self.canuse7info = 0
+            self.canuse30info = 0
+            for i in self.CanUseGetDict.values():
+                self.canuse7info += i[0] + i[1]
+                self.canuse30info += i[2] + i[3]
+            for i in self.FlexibleGetDict.values():
+                self.canuse7info += i[0] + i[1]
+                self.canuse30info += i[2] + i[3]
+            self.all7info = self.canuse7info
+            self.all30info = self.canuse30info
+            for i in self.LockedGetDict.values():
+                self.all7info += i[0] + i[1]
+                self.all30info += i[2] + i[3]
+            self.CanUseSum7InfoLabel.configure(text="{:.2f}".format(self.canuse7info))
+            self.CanUseSum30InfoLabel.configure(text="{:.2f}".format(self.canuse30info))
+            self.ALLSum7InfoLabel.configure(text="{:.2f}".format(self.all7info))
+            self.ALLSum30InfoLable.configure(text="{:.2f}".format(self.all30info))
         except Exception as msg:
             print('cualall'+str(msg))
 
     # 更新所有数据
     def updateall(self):
+        self.CUSListBox.delete(0, tk.END)
+        self.FBCListBox.delete(0, tk.END)
+        self.LKCListBox.delete(0, tk.END)
         # 更新ListBox信息
         sqc.InitDataFromDB()
         # 单项求合
@@ -448,6 +489,7 @@ class MSWin:
     # 查询历史变动
     def CaluHistoryInformation(self):
         try:
+            print('开始查询历史变动')
             # 遍历所有的历史数据
             for tbname in list(self.tableDict.values()):
                 if tbname[1] == 'canusehistory':
@@ -478,6 +520,8 @@ class MSWin:
                         self.LockedGetDict[dataname] = self.re730
             # print(self.CanUseGetDict,self.FlexibleGetDict,self.LockedGetDict,sep='\n')
             self.CaluHisInfoLabel.configure(text='已完成',fg='green')
+            # 更新所有信息
+            self.updateall()
         except Exception as msg:
             print('CaluHistoryInformation'+str(msg))
 
@@ -487,6 +531,7 @@ class MSWin:
         self.TM7 = 0
         self.TS30 = 0
         self.TM30 = 0
+
         try:
             if self.CurrectListBox == list(self.tableDict.keys())[0]:
                 self.gd = self.CanUseGetDict
@@ -599,12 +644,12 @@ class SqlCtrl:
             sql = '''
                 delete from {} where name = '{}';
             '''.format(tb,nm)
-            print(sql)
+
             self.cursor.execute(sql)
             sql = '''
                 alter table {} drop {};
             '''.format(msw.tableDict[tb][1],nm)
-            print(sql)
+
             self.cursor.execute(sql)
             self.cursor.execute('commit;')
             return True
@@ -674,7 +719,6 @@ class SqlCtrl:
     # 更新信息
     def CapitalUpdata(self,tb,f,nm,becall = False):
         sql = "update {0} set capital = {1} where name = '{2}';".format(tb,float(f),nm)
-        print(sql)
         try:
             self.cursor.execute(sql)
             self.cursor.execute('commit;')
@@ -708,19 +752,16 @@ class SqlCtrl:
             if list(msw.CanUseHisDict.values()).count(0) != 4:
                 sql = '''
                 insert into {} value(null,now(),{:.2f},{:.2f},{:.2f},{:.2f});'''.format('canusehistory',*msw.CanUseHisDict.values())
-                print(sql)
                 self.cursor.execute(sql)
             if list(msw.FlexibleHisDict.values()).count(0) != 3:
                 sql = '''
                             insert into {} value(null,now(),{:.2f},{:.2f},{:.2f});'''.format('flexiblehistory',
                                                                                     *msw.FlexibleHisDict.values())
-                print(sql)
                 self.cursor.execute(sql)
             if list(msw.LockedHisDict.values()).count(0) != 4:
                 sql = '''
                             insert into {} value(null,now(),{:.2f},{:.2f},{:.2f},{:.2f});'''.format('lockedhistory',
                                                                                     *msw.LockedHisDict.values())
-                print(sql)
                 self.cursor.execute(sql)
             self.cursor.execute('commit;')
         except Exception as msg:
