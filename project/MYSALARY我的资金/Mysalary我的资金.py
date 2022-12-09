@@ -26,6 +26,7 @@ class MSWin:
 
         self.CurrectListBox = None
         self.CurrectData = None
+        self.CurrectValue = 0
 
         self.updwin = None
         self.addwin = None
@@ -285,6 +286,7 @@ class MSWin:
         self.CurrectListBox = 'canusesalary'
         CUS_tkey = list(self.CanUseSalaryDict.keys())
         self.CurrectData = CUS_tkey[CUS_t[0]]
+        self.CurrectValue = self.CanUseSalaryDict[self.CurrectData]
         self.CUSLabel.configure(fg='blue')
         self.FBCLabel.configure(fg='black')
         self.LKCLabel.configure(fg='black')
@@ -304,6 +306,7 @@ class MSWin:
         self.CurrectListBox = 'flexiblecapital'
         FBC_key = list(self.FlexibleCapitalDict.keys())
         self.CurrectData = FBC_key[FBC_t[0]]
+        self.CurrectValue = self.FlexibleCapitalDict[self.CurrectData]
         self.CUSLabel.configure(fg='black')
         self.FBCLabel.configure(fg='blue')
         self.LKCLabel.configure(fg='black')
@@ -319,6 +322,7 @@ class MSWin:
         self.CurrectListBox = 'lockedcapital'
         LKC_key = list(self.LockedCapitalDict.keys())
         self.CurrectData = LKC_key[LKC_t[0]]
+        self.CurrectValue = self.LockedCapitalDict[self.CurrectData]
         self.CUSLabel.configure(fg='black')
         self.FBCLabel.configure(fg='black')
         self.LKCLabel.configure(fg='blue')
@@ -353,8 +357,10 @@ class MSWin:
         self.dataLabel = tk.Label(self.updwin,text='值:')
         self.dataEnrty = tk.Entry(self.updwin)
 
-        self.upsureButton = tk.Button(self.updwin,text='确认',command=lambda :self.updatedata(tb,self.dataEnrty.get(),nm))
-        self.upcancelButton = tk.Button(self.updwin,text='取消',command=lambda :self.updwin.destroy())
+        self.upsureButton = tk.Button(self.updwin,text='确认',width=15,command=lambda :self.updatedata(tb,self.dataEnrty.get(),nm))
+        self.upcancelButton = tk.Button(self.updwin,text='取消',width=10,command=lambda :self.updwin.destroy())
+
+        self.dataEnrty.insert(tk.END,str(self.CurrectValue))
 
         self.tbnameLabel.grid(row=0,column=0,sticky=tk.W)
         self.tbnameInfoLabel.grid(row=0,column=1,sticky=tk.W)
@@ -391,9 +397,9 @@ class MSWin:
         self.datavEntry = tk.Entry(self.addwin)
 
 
-        self.upsureButton = tk.Button(self.addwin, text='确认',
+        self.upsureButton = tk.Button(self.addwin, text='确认',width=15,
                                       command=lambda: sqc.AddNewCapital(self.tbnameInfoCombobox.get(),self.dataEnrty.get(),self.datavEntry.get()))
-        self.upcancelButton = tk.Button(self.addwin, text='取消', command=lambda: self.addwin.destroy())
+        self.upcancelButton = tk.Button(self.addwin, text='取消',width=15 ,command=lambda: self.addwin.destroy())
 
         self.tbnameLabel.grid(row=0, column=0, sticky=tk.W)
         self.tbnameInfoCombobox.grid(row=0, column=1, sticky=tk.W)

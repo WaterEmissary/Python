@@ -737,8 +737,8 @@ class Login():
         ...
     def Createlogin(self):
         self.login = tk.Tk()
-        self.login.title('登录')
-        self.loginLabel = tk.Label(self.login, text='用户名:')
+        self.login.title('登录界面')
+        self.loginLabel = tk.Label(self.login, text='用户名:                                             ')
         self.loginEntry = tk.Entry(self.login)
         self.loginButton = tk.Button(self.login, text='登录', command=lambda:sqc.logindb(self.loginEntry.get()))
         self.loginLabel.grid(row=0, column=0)
