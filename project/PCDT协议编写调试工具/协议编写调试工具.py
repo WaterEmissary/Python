@@ -33,6 +33,10 @@ v1.2    软件更名为 协议编写调试工具
 v1.3    添加电总发包转十六进制输出
 v1.4    CRC16改成组包工具，包括MODBUS和电总组包
         修复了部分窗口置顶的问题
+    v1.4.1
+        修复了一些BUG
+        优化了体验
+        CRC校验添加进制转换、校验长度位
 """
 
 # 初始值
@@ -1428,6 +1432,11 @@ class CrcCheck():
         self.REFINEntry = tk.Entry(self.ModBusSetFrame, width=20)
         self.REFOUTLabel = tk.Label(self.ModBusSetFrame, text='输出数据反转', font=tkFont.Font(size=10))
         self.REFOUTEntry = tk.Entry(self.ModBusSetFrame, width=20)
+        self.int2hexLabel = tk.Label(self.ModBusSetFrame,text='Int转Hex:',font=tkFont.Font(size=10))
+        self.int2hexEntry = tk.Entry(self.ModBusSetFrame,width=15)
+        self.hexresultEntry = tk.Entry(self.ModBusSetFrame,width=15)
+        self.CheckLenLabel = tk.Label(self.ModBusSetFrame,text='校验长度位:')
+        self.CheckLenEntry = tk.Entry(self.ModBusSetFrame,width=15,state='disabled')
 
         # 要校验的数据部分
         self.CheckDataLabel = tk.Label(self.MODBUSFrame, text='要校验的数据:', font=tkFont.Font(size=13))
@@ -1456,18 +1465,23 @@ class CrcCheck():
         self.WidthEntry.grid(row=self.r, column=1)
         self.PolyLabel.grid(row=self.r, column=2)
         self.PolyEntry.grid(row=self.r, column=3)
+        self.int2hexLabel.grid(row=self.r,column=4)
+        self.int2hexEntry.grid(row=self.r,column=5)
         self.r = self.r + 1
 
         self.InitLabel.grid(row=self.r, column=0)
         self.InitEntry.grid(row=self.r, column=1)
         self.XoroutLabel.grid(row=self.r, column=2)
         self.XoroutEntry.grid(row=self.r, column=3)
+        self.hexresultEntry.grid(row=self.r,column=5)
         self.r = self.r + 1
 
         self.REFINLabel.grid(row=self.r, column=0)
         self.REFINEntry.grid(row=self.r, column=1)
         self.REFOUTLabel.grid(row=self.r, column=2)
         self.REFOUTEntry.grid(row=self.r, column=3)
+        self.CheckLenLabel.grid(row=self.r,column=4)
+        self.CheckLenEntry.grid(row=self.r,column=5)
         self.r += 1
 
         self.CheckDataLabel.grid(row=self.r, column=0,sticky=tk.W)
@@ -1475,21 +1489,40 @@ class CrcCheck():
         self.CheckDataText.grid(row=self.r, column=0, columnspan=5)
         self.r = self.r + 1
 
-        self.CrcCheckButton.grid(row=self.r, column=0, columnspan=2)
-        self.CheckResultLabel.grid(row=self.r, column=2)
-        self.CheckResultEntry.grid(row=self.r, column=3)
+        self.CrcCheckButton.grid(row=self.r, column=0, columnspan=2,sticky=tk.W,padx=45)
+        self.CheckResultLabel.grid(row=self.r, column=1,sticky=tk.E)
+        self.CheckResultEntry.grid(row=self.r, column=2)
         self.r = self.r + 1
 
-        self.CheckResultOutLabel.grid(row=self.r, column=0)
+        self.CheckResultOutLabel.grid(row=self.r, column=0,sticky=tk.W)
         self.r = self.r + 1
         self.CheckResultOutText.grid(row=self.r, column=0, columnspan=5)
         self.r += 1
-        self.CodeResultOutLabel.grid(row=self.r, column=0, sticky=tk.W)
+        self.CodeResultOutLabel.grid(row=self.r, column=0,sticky=tk.W)
         self.r += 1
         self.CodeResultOutText.grid(row=self.r, column=0, columnspan=5)
         self.setWPIX(event=None)
+        # int转hex进程
+        thint2hex = threading.Thread(target=self.ModBusInt2Hex,args=())
+        thint2hex.daemon = True
+        thint2hex.start()
 
         self.MODBUSFrame.grid(row=2, column=0, columnspan=3)
+
+    # ModBus界面int2hex函数
+    def ModBusInt2Hex(self):
+        try:
+            while self.CheckAlgoComboBox.get() == self.CheckAogoComboBoxList[0]:
+                try:
+                    self.hexresultEntry.delete(0, tk.END)
+                    inttemp = int(self.int2hexEntry.get())
+                    self.hexresultEntry.insert(tk.END,"0x{}".format(hex(inttemp)[2:].upper()))
+                except:
+                    continue
+                finally:
+                    time.sleep(1)
+        except:
+            return
 
     # 创建电总窗口
     def CreateYDT1363_3Win(self):
@@ -1658,6 +1691,11 @@ class CrcCheck():
         needcheck = needcheck.replace('，', ' ')
         result = self.CRC16(needcheck,algo)
         coder = result[0].split(' ')
+        # 校验长度位
+        try:
+            self.CualCheckLen(coder)
+        except Exception as msg:
+            print('CRCCALCCRD'+str(msg))
         for i in range(len(coder)):
             coder[i] = '0x'+coder[i]+','
         coder[-1] = coder[-1][:-1]
@@ -1675,6 +1713,30 @@ class CrcCheck():
         self.CodeResultOutText.insert(0.0,t)
         self.CheckResultOutText.configure(state='disabled')
         self.CodeResultOutText.configure(state='disabled')
+
+    # 计算校验长度位
+    def CualCheckLen(self,res):
+        self.CheckLenEntry.configure(state='normal')
+        self.CheckLenEntry.delete(0,tk.END)
+        if len(res) == 8:
+            op = res[1]
+            getlen = eval('0x' + res[4] + res[5])
+            self.clen = 0
+            # 功能码01 长度/8
+            if op == '01':
+                if(getlen%8==0):
+                    self.clen = getlen//8
+                else:
+                    self.clen = getlen//8+1
+
+            # 功能码03
+            if op == '03':
+                self.clen = getlen * 2
+        self.clen += 1
+        self.CheckLenEntry.insert(tk.END,"0x{:0>2}".format(hex(self.clen)[2:].upper()))
+        self.CheckLenEntry.configure(state='disabled')
+
+
 
     # 电总LCHKSUM计算   返回  SET（LENID,LCHKSUM,高位，低位）
     def YDT1363_3LCHKSUM(self,datalen):
@@ -3581,7 +3643,7 @@ class Public():
         self.IfGetInfo = False
         self.IfSendSmartInfo = False
 
-        self.Auther = 'V1.4\tAuther by Zx'
+        self.Auther = 'V1.4.1\tAuther by Zx'
 
     # 初始化常用List
     def initCFG(self):
