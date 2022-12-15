@@ -37,6 +37,8 @@ class MSWin:
 
         self.tableDict = {'canusesalary': ['可用资金','canusehistory'], 'flexiblecapital': ['灵活资金','flexiblehistory'], 'lockedcapital': ['锁定资金','lockedhistory']}
 
+        self.IfChanged = False # 是否修改过数据
+        self.IfUpdate = True   # 是否更新历史
 
     # 创建窗口
     def CreateWin(self):
@@ -125,6 +127,7 @@ class MSWin:
         self.CreateNewCapitalButton = tk.Button(self.FunctionFrame,text='新建资金',command=self.Addwin, font=tk.font.Font(size=13),width=15)
         self.UpdateCaptialButton = tk.Button(self.FunctionFrame,text='修改资金',command=self.Updatewin, font=tk.font.Font(size=13),width=15)
         self.DelCaptialButton = tk.Button(self.FunctionFrame,text='删除资金',command=self.DelC, font=tk.font.Font(size=13),width=15)
+        self.UpdateHistoryButton = tk.Button(self.FunctionFrame,text='推送更新',command=sqc.UpdateHistory,font=tk.font.Font(size=13),width=15)
 
 
         # 显示到屏幕
@@ -216,6 +219,8 @@ class MSWin:
         self.UpdateCaptialButton.grid(row=fr,column=0)
         fr += 1
         self.DelCaptialButton.grid(row=fr,column=0)
+        ro += 1
+        self.UpdateHistoryButton.grid(row=fr,column=0)
 
         #数据初始化
         # 绑定选中函数到列表
@@ -430,6 +435,7 @@ class MSWin:
 
     # 修改数据
     def updatedata(self,tb,f,nm):
+        print(msw.CanUseHisDict)
         if sqc.CapitalUpdata(tb,f,nm):
             if self.CurrectListBox == 'canusesalary':
                 self.before = self.CanUseSalaryDict[self.CurrectData]
@@ -440,7 +446,9 @@ class MSWin:
             elif self.CurrectListBox == list(self.tableDict.keys())[2]:
                 self.before = self.LockedCapitalDict[self.CurrectData]
                 self.LockedHisDict[self.CurrectData] += float(f) - self.before
-
+            # 已修改数据，未提交
+            self.IfChanged = True
+            self.IfUpdate = False
             self.updateall()
 
         self.updwin.destroy()
@@ -754,30 +762,43 @@ class SqlCtrl:
 
     # 上传修改后的数据
     def UpdateHistory(self):
-        try:
-            if list(msw.CanUseHisDict.values()).count(0) != 4:
-                sql = '''
-                insert into {} value(null,now(),{:.2f},{:.2f},{:.2f},{:.2f});'''.format('canusehistory',*msw.CanUseHisDict.values())
-                self.cursor.execute(sql)
-            if list(msw.FlexibleHisDict.values()).count(0) != 3:
-                sql = '''
-                            insert into {} value(null,now(),{:.2f},{:.2f},{:.2f});'''.format('flexiblehistory',
-                                                                                    *msw.FlexibleHisDict.values())
-                self.cursor.execute(sql)
-            if list(msw.LockedHisDict.values()).count(0) != 4:
-                sql = '''
-                            insert into {} value(null,now(),{:.2f},{:.2f},{:.2f},{:.2f});'''.format('lockedhistory',
-                                                                                    *msw.LockedHisDict.values())
-                self.cursor.execute(sql)
-            self.cursor.execute('commit;')
-        except Exception as msg:
-            print(str(msg))
+        print(msw.IfChanged,msw.IfUpdate)
+
+        # 如果更新过数据可以更新
+        if msw.IfChanged == True:
+            try:
+                if list(msw.CanUseHisDict.values()).count(0) != len(msw.CanUseHisDict):
+                    sql = '''
+                    insert into {} value(null,now(),{:.2f},{:.2f},{:.2f},{:.2f});'''.format('canusehistory',*msw.CanUseHisDict.values())
+                    self.cursor.execute(sql)
+                if list(msw.FlexibleHisDict.values()).count(0) != len(msw.FlexibleHisDict):
+                    sql = '''
+                                insert into {} value(null,now(),{:.2f},{:.2f},{:.2f});'''.format('flexiblehistory',
+                                                                                        *msw.FlexibleHisDict.values())
+                    self.cursor.execute(sql)
+                if list(msw.LockedHisDict.values()).count(0) != len(msw.LockedHisDict):
+                    sql = '''
+                                insert into {} value(null,now(),{:.2f},{:.2f},{:.2f},{:.2f});'''.format('lockedhistory',
+                                                                                        *msw.LockedHisDict.values())
+                    self.cursor.execute(sql)
+                self.cursor.execute('commit;')
+                # 提交数据后将是否更新设置为真
+                msw.IfUpdate = True
+                msw.IfChanged = False
+                msw.CanUseHisDict = {}
+                msw.FlexibleHisDict = {}
+                msw.LockedHisDict = {}
+                msw.InitOpHistory()
+                msw.CaluHistoryInformation()
+                msw.updateall()
+            except Exception as msg:
+                print('UpdateHistory'+str(msg))
 
 
 msw = MSWin()
 sqc = SqlCtrl()
 msw.CreateWin()
 
-
-# 关闭程序后记录变化
-sqc.UpdateHistory()
+#如果改变了数据并且没有手动更新则在程序关闭时更新
+if msw.IfChanged == True and msw.IfUpdate == False:
+    sqc.UpdateHistory()
