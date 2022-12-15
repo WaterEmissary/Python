@@ -19,18 +19,30 @@ class OverTimeCalendar():
         self.NowChoice = None
         self.NowChoiceInfo = None
         self.NowMonthData = {}
+
+        self.basesalary = 5800
+        self.tax = int(self.basesalary * 0.185 + 10)
+        self.workday = 0
+        self.returnratio = 0
+        self.average = 0
+        self.baverage = 0
         self.allday = 0
+        self.allleaveday = 0
         self.ot7day = 0
         self.ot8day = 0
         self.leave1day = 0
         self.leave2day = 0
         self.ill1day = 0
         self.ill2day = 0
-        self.basesalary = 5800
+        self.otsalary = ''
+        self.cutsalary = ''
+        self.maxsalary = ''
+        self.willgetsalary = ''
+
         self.illcut = 38
         self.leavecut = 97
         self.otadd = 75
-        self.tax = int(self.basesalary * 0.185 + 10)
+
 
     # 右键菜单弹出
     def popup(self,event):
@@ -485,10 +497,11 @@ class OverTimeCalendar():
                 self.ill1day += 1
             elif self.NowMonthData[i][3] == -4:
                 self.ill2day += 1
+        self.allleaveday = self.leave1day+self.leave2day+self.ill1day+self.ill2day
         self.basesalaryInfoLabel.configure(text=str(self.basesalary))
         self.taxInfoLabel.configure(text=str(self.tax))
         self.allDayInfoLabel.configure(text=str(self.allday)+' 天')
-        self.allLDayInfoLabel.configure(text=str(self.leave1day+self.leave2day+self.ill1day+self.ill2day)+' 天')
+        self.allLDayInfoLabel.configure(text=str(self.allleaveday)+' 天')
         self.OT7DayInfoLabel.configure(text=str(self.ot7day)+' 次')
         self.OT8DayInfoLabel.configure(text=str(self.ot8day)+' 次')
         self.Leave1InfoLabel.configure(text=str(self.leave1day)+ ' 次')
@@ -499,12 +512,14 @@ class OverTimeCalendar():
         t = str(self.otadd) + "*( "+ str(self.ot7day) + " + "+str(self.ot8day)+ " * 2 ) = " \
             + str(self.otadd*(self.ot7day+self.ot8day*2))
         self.caluInfoLabel.configure(text=t)
+        self.otsalary = t
 
         # 计算扣除工资
         tt = "- ( " + str(self.leave1day) + " + " + str(self.leave2day) + " * 2 )*"+str(self.leavecut)+" + " \
             "( " + str(self.ill1day) + " + " + str(self.ill2day) + " * 2 )*"+str(self.illcut)+" = -" \
             +str((self.leave1day+self.leave2day*2)*(self.leavecut)+((self.ill1day+self.ill2day*2)*(self.illcut)))
         self.decuctInfoLabel.configure(text = tt)
+        self.cutsalary = tt
 
         # 预估到手工资
         te = str(self.basesalary) + ' - ' + str(self.tax) + ' + '+\
@@ -515,6 +530,7 @@ class OverTimeCalendar():
                  (self.leave1day+self.leave2day*2)*(self.leavecut)-
                  ((self.ill1day+self.ill2day*2)*(self.illcut)))
         self.calugetInfoLabel.configure(text=te)
+        self.willgetsalary = te
 
         # 预估最高到手工资
         willget = self.CaluMaxGet()
@@ -524,24 +540,41 @@ class OverTimeCalendar():
                   (self.ill1day+self.ill2day*2)*(self.illcut)
         tm = str(haveget) +' + ' + str(willget) + ' = ' + str(haveget+willget)
         self.calumaxgetInfoLabel.configure(text=tm)
+        self.maxsalary = tm
 
         # 计算平均工资
         self.AverageDaySalary()
         self.workdayInfoLabel.configure(text=str(self.workday))
         print(self.workday)
-        average = (self.basesalary - self.tax) / self.workday
-        self.averagedayInfoLabel.configure(text="{0:.2f}".format(average))
-        baverage = (self.basesalary) / self.workday
-        self.averagedaybeforeInfoLabel.configure(text="{0:.2f}".format(baverage))
-        eaverage = average/8
+        self.average = (self.basesalary - self.tax) / self.workday
+        self.averagedayInfoLabel.configure(text="{0:.2f}".format(self.average))
+        self.baverage = (self.basesalary) / self.workday
+        self.averagedaybeforeInfoLabel.configure(text="{0:.2f}".format(self.baverage))
+        eaverage = self.average/8
         eot8 = 150/3
-        self.workEfficiencyInfoLabel.configure(text="{0:.2f}%".format((eot8/eaverage)*100))
+        self.returnratio = (eot8/eaverage)*100
+        self.workEfficiencyInfoLabel.configure(text="{0:.2f}%".format(self.returnratio))
 
     # 连接数据库
     def c2sql(self):
         state = db.Connect2Mysql()
         if state != False:
             self.dbconnectInfoLabel.configure(text='MySql'+str(state[0]),fg='green')
+
+    # 提交网页信息到数据库
+    def pushWewInfo(self):
+        sql = "delete from webinfo where id = 1;"
+        db.cursor.execute(sql)
+
+        sql = '''
+            insert into webinfo value (1,{},{},{},{},{},{},{},{},{},{},{},{},{},{},'{}','{}','{}','{}');
+        '''.format(self.basesalary,self.tax,self.workday,self.returnratio,self.average,self.baverage,self.allday,self.allleaveday,self.ot7day,self.ot8day,
+              self.leave1day,self.leave2day,self.ill1day,self.ill2day,self.otsalary,self.cutsalary,self.maxsalary,self.willgetsalary)
+        db.cursor.execute(sql)
+        db.cursor.execute('commit;')
+        # print(sql)
+        # print(self.basesalary,self.tax,self.workday,self.returnratio,self.average,self.baverage,self.allday,self.allleaveday,self.ot7day,self.ot8day,
+        #       self.leave1day,self.leave2day,self.ill1day,self.ill2day,self.otsalary,self.cutsalary,self.maxsalary,self.willgetsalary,sep='\n')
 
 # 数据库类
 class MySql():
@@ -576,3 +609,5 @@ otc.CreateMainWin()
 
 
 otc.win.mainloop()
+
+otc.pushWewInfo()
